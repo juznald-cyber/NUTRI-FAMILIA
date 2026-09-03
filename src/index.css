@@ -1,0 +1,183 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================
+   NutriFamilia — Apple Design System
+   ============================================ */
+
+@layer base {
+  * {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-apple-bg text-gray-900 font-sans;
+    font-feature-settings: 'kern' 1, 'liga' 1;
+    overscroll-behavior-y: none;
+    min-height: 100dvh;
+  }
+
+  #root {
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Apple-style scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.25);
+  }
+
+  /* Hide scrollbar for carousel-like elements */
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+@layer components {
+  /* Apple Glass Card */
+  .apple-glass {
+    background: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    box-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.05),
+                inset 0 1px 1px 0 rgba(255, 255, 255, 0.4);
+  }
+
+  /* Apple Card (solid) */
+  .apple-card {
+    @apply bg-white rounded-apple shadow-apple;
+    border: 0.5px solid rgba(0, 0, 0, 0.04);
+  }
+
+  /* Apple Button Primary */
+  .apple-btn {
+    @apply inline-flex items-center justify-center font-semibold text-sm
+           rounded-full px-6 py-3 transition-all duration-200
+           active:scale-95 active:opacity-80;
+  }
+
+  .apple-btn-primary {
+    @apply apple-btn bg-apple-blue text-white shadow-apple;
+  }
+
+  .apple-btn-secondary {
+    @apply apple-btn bg-gray-100 text-gray-900;
+  }
+
+  .apple-btn-danger {
+    @apply apple-btn bg-apple-red text-white;
+  }
+
+  /* Apple Input */
+  .apple-input {
+    @apply w-full px-4 py-3 bg-gray-100 rounded-apple-sm text-base
+           border-0 outline-none transition-all duration-200
+           focus:ring-2 focus:ring-apple-blue/30 focus:bg-white
+           placeholder:text-gray-400;
+  }
+
+  /* Apple Section Header */
+  .apple-section-title {
+    @apply text-xs font-semibold uppercase tracking-wider text-apple-gray-1 px-1 mb-2;
+  }
+
+  /* Apple Large Title */
+  .apple-large-title {
+    @apply text-3xl font-bold tracking-tight text-gray-900;
+  }
+
+  /* Apple Overline */
+  .apple-overline {
+    @apply text-[11px] font-semibold uppercase tracking-wider text-apple-gray-1;
+  }
+
+  /* Apple Divider */
+  .apple-divider {
+    @apply h-px bg-gray-200/60 mx-4;
+  }
+
+  /* Badge */
+  .apple-badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  /* Status indicators */
+  .stock-high {
+    @apply bg-green-100 text-green-800;
+  }
+  .stock-medium {
+    @apply bg-yellow-100 text-yellow-800;
+  }
+  .stock-low {
+    @apply bg-red-100 text-red-800;
+  }
+
+  /* Bottom Sheet Overlay */
+  .sheet-overlay {
+    @apply fixed inset-0 bg-black/30 backdrop-blur-sm z-40;
+    animation: fadeIn 0.2s ease-out;
+  }
+
+  /* Sheet Content */
+  .sheet-content {
+    @apply fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl z-50
+           max-h-[90vh] overflow-y-auto;
+    animation: slideUp 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.12);
+  }
+
+  .sheet-handle {
+    @apply w-9 h-1 bg-gray-300 rounded-full mx-auto mt-3 mb-4;
+  }
+
+  /* Empty State */
+  .empty-state {
+    @apply flex flex-col items-center justify-center py-16 px-8 text-center;
+  }
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(0.9); opacity: 0.5; }
+  50% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(0.9); opacity: 0.5; }
+}

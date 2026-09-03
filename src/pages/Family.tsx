@@ -1,0 +1,275 @@
+import React, { useState } from 'react';
+import { UserPlus, Edit3, Trash2, Save, X, Users } from 'lucide-react';
+import { useFamilyMembers, addFamilyMember, updateFamilyMember, deleteFamilyMember } from '../hooks/useDatabase';
+import type { FamilyMember } from '../db';
+
+const EMOJI_OPTIONS = ['👨', '👩', '👦', '👧', '👶', '🧓', '👴', '👵', '🐕', '🐱'];
+
+const RESTRICTION_OPTIONS = [
+  'Vegetariano', 'Vegano', 'Sin gluten', 'Sin lactosa',
+  'Sin mariscos', 'Sin frutos secos', 'Bajo en sodio',
+  'Diabético', 'Hipertensión', 'Embarazo',
+];
+
+const Family: React.FC = () => {
+  const members = useFamilyMembers();
+  const [isAdding, setIsAdding] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [form, setForm] = useState({
+    name: '',
+    emoji: '👨',
+    age: 30,
+    calorieGoal: 2000,
+    restrictions: [] as string[],
+  });
+
+  const resetForm = () => {
+    setForm({ name: '', emoji: '👨', age: 30, calorieGoal: 2000, restrictions: [] });
+    setIsAdding(false);
+    setEditingId(null);
+  };
+
+  const handleSave = async () => {
+    if (!form.name.trim()) return;
+
+    if (editingId) {
+      await updateFamilyMember(editingId, form);
+    } else {
+      await addFamilyMember(form);
+    }
+    resetForm();
+  };
+
+  const handleEdit = (member: FamilyMember) => {
+    setEditingId(member.id!);
+    setForm({
+      name: member.name,
+      emoji: member.emoji,
+      age: member.age,
+      calorieGoal: member.calorieGoal,
+      restrictions: member.restrictions,
+    });
+    setIsAdding(true);
+  };
+
+  const handleDelete = async (id: number) => {
+    await deleteFamilyMember(id);
+  };
+
+  const toggleRestriction = (restriction: string) => {
+    setForm(prev => ({
+      ...prev,
+      restrictions: prev.restrictions.includes(restriction)
+        ? prev.restrictions.filter(r => r !== restriction)
+        : [...prev.restrictions, restriction],
+    }));
+  };
+
+  const totalCalories = members?.reduce((sum, m) => sum + m.calorieGoal, 0) || 0;
+
+  return (
+    <div className="px-5 pt-2 pb-4 animate-fade-in">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h1 className="apple-large-title">Mi Familia</h1>
+          <p className="text-sm text-apple-gray-1 mt-0.5">
+            {members?.length || 0} miembros
+          </p>
+        </div>
+        {!isAdding && (
+          <button
+            onClick={() => setIsAdding(true)}
+            className="w-10 h-10 bg-apple-blue rounded-full flex items-center justify-center shadow-apple active:scale-95 transition-transform"
+          >
+            <UserPlus className="w-5 h-5 text-white" />
+          </button>
+        )}
+      </div>
+
+      {/* Summary Card */}
+      {members && members.length > 0 && (
+        <div className="apple-glass rounded-apple-lg p-5 mb-5">
+          <div className="flex items-center gap-3 mb-3">
+            <Users className="w-6 h-6 text-apple-blue" />
+            <h3 className="font-semibold text-gray-900">Resumen Familiar</h3>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-2xl font-bold text-gray-900">{members.length}</p>
+              <p className="text-xs text-apple-gray-1">Miembros</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-gray-900">{totalCalories.toLocaleString()}</p>
+              <p className="text-xs text-apple-gray-1">kcal/día total</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add/Edit Form */}
+      {isAdding && (
+        <div className="apple-card p-5 mb-5 animate-scale-in">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-gray-900">
+              {editingId ? 'Editar Miembro' : 'Nuevo Miembro'}
+            </h3>
+            <button onClick={resetForm} className="text-apple-gray-2 hover:text-gray-900">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Emoji Selector */}
+          <div className="mb-4">
+            <label className="apple-section-title">Avatar</label>
+            <div className="flex gap-2 flex-wrap">
+              {EMOJI_OPTIONS.map(emoji => (
+                <button
+                  key={emoji}
+                  onClick={() => setForm(prev => ({ ...prev, emoji }))}
+                  className={`w-10 h-10 rounded-full flex items-center justify-center text-xl transition-all ${
+                    form.emoji === emoji
+                      ? 'bg-apple-blue/15 ring-2 ring-apple-blue scale-110'
+                      : 'bg-gray-100 hover:bg-gray-200'
+                  }`}
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Name */}
+          <div className="mb-4">
+            <label className="apple-section-title">Nombre</label>
+            <input
+              type="text"
+              value={form.name}
+              onChange={e => setForm(prev => ({ ...prev, name: e.target.value }))}
+              placeholder="Nombre del miembro"
+              className="apple-input"
+            />
+          </div>
+
+          {/* Age & Calories */}
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <div>
+              <label className="apple-section-title">Edad</label>
+              <input
+                type="number"
+                value={form.age}
+                onChange={e => setForm(prev => ({ ...prev, age: parseInt(e.target.value) || 0 }))}
+                className="apple-input"
+                min={0}
+                max={120}
+              />
+            </div>
+            <div>
+              <label className="apple-section-title">Meta Calórica</label>
+              <input
+                type="number"
+                value={form.calorieGoal}
+                onChange={e => setForm(prev => ({ ...prev, calorieGoal: parseInt(e.target.value) || 0 }))}
+                className="apple-input"
+                min={500}
+                max={5000}
+                step={100}
+              />
+            </div>
+          </div>
+
+          {/* Restrictions */}
+          <div className="mb-4">
+            <label className="apple-section-title">Restricciones Alimenticias</label>
+            <div className="flex flex-wrap gap-2">
+              {RESTRICTION_OPTIONS.map(restriction => (
+                <button
+                  key={restriction}
+                  onClick={() => toggleRestriction(restriction)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                    form.restrictions.includes(restriction)
+                      ? 'bg-apple-red/10 text-apple-red ring-1 ring-apple-red/30'
+                      : 'bg-gray-100 text-gray-600'
+                  }`}
+                >
+                  {restriction}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Save Button */}
+          <button onClick={handleSave} className="apple-btn-primary w-full">
+            <Save className="w-4 h-4 mr-2" />
+            {editingId ? 'Guardar Cambios' : 'Agregar Miembro'}
+          </button>
+        </div>
+      )}
+
+      {/* Members List */}
+      <div className="space-y-3">
+        {members && members.length > 0 ? (
+          members.map(member => (
+            <div key={member.id} className="apple-card p-4 flex items-center gap-4">
+              <span className="text-3xl">{member.emoji}</span>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-gray-900">{member.name}</p>
+                <div className="flex items-center gap-3 mt-1">
+                  <span className="text-xs text-apple-gray-1">{member.age} años</span>
+                  <span className="text-xs text-apple-gray-1">{member.calorieGoal} kcal/día</span>
+                </div>
+                {member.restrictions.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {member.restrictions.map(r => (
+                      <span key={r} className="px-2 py-0.5 bg-apple-red/8 text-apple-red text-[10px] font-medium rounded-full">
+                        {r}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="flex gap-1">
+                <button
+                  onClick={() => handleEdit(member)}
+                  className="w-8 h-8 flex items-center justify-center text-apple-gray-2 hover:text-apple-blue transition-colors"
+                >
+                  <Edit3 className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => member.id && handleDelete(member.id)}
+                  className="w-8 h-8 flex items-center justify-center text-apple-gray-2 hover:text-apple-red transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          ))
+        ) : (
+          !isAdding && (
+            <div className="empty-state">
+              <span className="text-5xl mb-4">👨‍👩‍👧‍👦</span>
+              <h3 className="text-lg font-semibold text-gray-900 mb-1">Sin miembros</h3>
+              <p className="text-sm text-apple-gray-1 mb-4">
+                Agrega a los miembros de tu familia para personalizar la planificación
+              </p>
+              <button onClick={() => setIsAdding(true)} className="apple-btn-primary">
+                <UserPlus className="w-4 h-4 mr-2" />
+                Agregar Primer Miembro
+              </button>
+            </div>
+          )
+        )}
+      </div>
+
+      {/* App Info */}
+      <div className="mt-8 text-center">
+        <p className="text-xs text-apple-gray-2">NutriFamilia v1.0</p>
+        <p className="text-xs text-apple-gray-2 mt-0.5">
+          Tus datos se guardan localmente en este dispositivo
+        </p>
+      </div>
+    </div>
+  );
+};
+
+export default Family;
