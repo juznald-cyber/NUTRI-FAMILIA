@@ -47,16 +47,18 @@ export default function Login() {
       navigate('/');
     } catch (err: any) {
       console.error(err);
-      if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
-        setError('Correo o contraseña incorrectos.');
+      if (err.code === 'auth/wrong-password') {
+        setError('Contraseña incorrecta.');
+      } else if (err.code === 'auth/user-not-found') {
+        setError('Usuario no encontrado. Por favor crea una cuenta primero.');
       } else if (err.code === 'auth/email-already-in-use') {
         setError('Este correo electrónico ya está registrado.');
       } else if (err.code === 'auth/invalid-email') {
         setError('El formato del correo electrónico no es válido.');
       } else if (err.code === 'auth/weak-password') {
-        setError('La contraseña es demasiado débil.');
+        setError('La contraseña debe tener al menos 6 caracteres.');
       } else {
-        setError('Error al procesar la solicitud. Por favor intenta de nuevo.');
+        setError(err.message || 'Error al procesar la solicitud. Por favor intenta de nuevo.');
       }
     } finally {
       setLoading(false);
