@@ -89,7 +89,8 @@ const Home: React.FC = () => {
               <circle
                 cx="50" cy="50" r="42"
                 fill="none"
-                stroke="#F2F2F7"
+                stroke="currentColor"
+                className="text-gray-200 dark:text-white/10"
                 strokeWidth="10"
               />
               <circle
@@ -104,13 +105,13 @@ const Home: React.FC = () => {
               />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-lg font-bold text-gray-900">{nutrition.calories}</span>
-              <span className="text-[10px] text-apple-gray-1">kcal</span>
+              <span className="text-lg font-bold text-gray-900 dark:text-white">{nutrition.calories}</span>
+              <span className="text-[10px] text-apple-gray-1 dark:text-gray-400">kcal</span>
             </div>
           </div>
           <div className="flex-1">
-            <h3 className="font-semibold text-gray-900">Resumen del Día</h3>
-            <p className="text-sm text-apple-gray-1 mt-0.5">{nutrition.calories} de {calorieGoal} kcal</p>
+            <h3 className="font-semibold text-gray-900 dark:text-white">Resumen del Día</h3>
+            <p className="text-sm text-apple-gray-1 dark:text-gray-400 mt-0.5">{nutrition.calories} de {calorieGoal} kcal</p>
             <div className="mt-3 space-y-1.5">
               <MacroBar label="Proteína" value={nutrition.protein} max={75} color="bg-apple-green" />
               <MacroBar label="Carbos" value={nutrition.carbs} max={250} color="bg-apple-orange" />
@@ -122,7 +123,7 @@ const Home: React.FC = () => {
 
       {/* Today's Menu */}
       <div>
-        <h2 className="text-xl font-bold text-gray-900 mb-3">Menú de Hoy</h2>
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Menú de Hoy</h2>
         <div className="space-y-2.5">
           <MealRow
             emoji={getMealEmoji('breakfast')}
@@ -168,12 +169,12 @@ const Home: React.FC = () => {
       </div>
 
       {/* Tip of the Day */}
-      <div className="bg-gradient-to-r from-apple-blue/10 to-apple-teal/10 rounded-apple-lg p-5">
+      <div className="bg-gradient-to-r from-apple-blue/10 to-apple-teal/10 dark:from-apple-blue/20 dark:to-apple-teal/20 rounded-apple-lg p-5 border border-apple-blue/10 dark:border-white/5">
         <div className="flex items-start gap-3">
           <Sparkles className="w-5 h-5 text-apple-blue flex-shrink-0 mt-0.5" />
           <div>
-            <h3 className="font-semibold text-gray-900 text-sm">Tip del Día</h3>
-            <p className="text-sm text-gray-600 mt-1">
+            <h3 className="font-semibold text-gray-900 dark:text-white text-sm">Tip del Día</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
               {randomTip.emoji} {randomTip.text}
             </p>
           </div>
@@ -183,7 +184,7 @@ const Home: React.FC = () => {
       {/* Water Quick Tracker */}
       <div className="apple-card p-5">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold text-gray-900">Hidratación</h3>
+          <h3 className="font-semibold text-gray-900 dark:text-white">Hidratación</h3>
           <span className="text-sm text-apple-blue font-medium">
             {waterLog?.glasses || 0} de 8 vasos
           </span>
@@ -195,8 +196,8 @@ const Home: React.FC = () => {
               onClick={() => setWaterLog(today, i + 1)}
               className={`w-8 h-10 rounded-lg flex items-center justify-center transition-all duration-200 ${
                 i < (waterLog?.glasses || 0)
-                  ? 'bg-apple-blue/15 text-apple-blue'
-                  : 'bg-gray-100 text-gray-300'
+                  ? 'bg-apple-blue/15 text-apple-blue dark:bg-apple-blue/25'
+                  : 'bg-gray-100 dark:bg-white/10 text-gray-300 dark:text-gray-600 hover:bg-gray-200 dark:hover:bg-white/20'
               }`}
             >
               <Droplets className="w-4 h-4" />
@@ -219,14 +220,14 @@ const MacroBar: React.FC<{
   const progress = Math.min((value / max) * 100, 100);
   return (
     <div className="flex items-center gap-2">
-      <span className="text-xs text-apple-gray-1 w-14">{label}</span>
-      <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+      <span className="text-xs text-apple-gray-1 dark:text-gray-400 w-14">{label}</span>
+      <div className="flex-1 h-1.5 bg-gray-200 dark:bg-white/10 rounded-full overflow-hidden">
         <div
           className={`h-full rounded-full transition-all duration-700 ${color}`}
           style={{ width: `${progress}%` }}
         />
       </div>
-      <span className="text-xs font-medium text-gray-500 w-8 text-right">{value}g</span>
+      <span className="text-xs font-medium text-gray-500 dark:text-gray-300 w-8 text-right">{value}g</span>
     </div>
   );
 };
@@ -241,15 +242,15 @@ const MealRow: React.FC<{
   <div className="apple-card p-4 flex items-center gap-3">
     <span className="text-2xl">{emoji}</span>
     <div className="flex-1 min-w-0">
-      <p className="text-xs text-apple-gray-1 font-medium">{time} {label}</p>
+      <p className="text-xs text-apple-gray-1 dark:text-gray-400 font-medium">{time} {label}</p>
       {name ? (
-        <p className="font-medium text-gray-900 truncate">{name}</p>
+        <p className="font-medium text-gray-900 dark:text-white truncate">{name}</p>
       ) : (
-        <p className="text-sm text-apple-gray-2 italic">Sin planificar</p>
+        <p className="text-sm text-apple-gray-2 dark:text-gray-500 italic">Sin planificar</p>
       )}
     </div>
     {calories > 0 && (
-      <span className="text-sm font-medium text-apple-gray-1">{calories} kcal</span>
+      <span className="text-sm font-medium text-apple-gray-1 dark:text-gray-400">{calories} kcal</span>
     )}
   </div>
 );

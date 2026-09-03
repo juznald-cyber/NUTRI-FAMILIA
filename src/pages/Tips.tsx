@@ -32,7 +32,7 @@ const Tips: React.FC = () => {
       <h1 className="apple-large-title mb-4">Tips y Consejos</h1>
 
       {/* Tab Selector */}
-      <div className="flex bg-apple-gray-6 rounded-apple-sm p-1 mb-5">
+      <div className="flex bg-apple-gray-6 dark:bg-white/10 rounded-apple-sm p-1 mb-5">
         {TABS.map(tab => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.key;
@@ -42,8 +42,8 @@ const Tips: React.FC = () => {
               onClick={() => setActiveTab(tab.key)}
               className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-[10px] text-xs font-semibold transition-all ${
                 isActive
-                  ? 'bg-white text-gray-900 shadow-apple'
-                  : 'text-apple-gray-1'
+                  ? 'bg-white dark:bg-[#2C2C2E] text-gray-900 dark:text-white shadow-apple'
+                  : 'text-apple-gray-1 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
               }`}
             >
               <Icon className="w-3.5 h-3.5" />
@@ -56,7 +56,7 @@ const Tips: React.FC = () => {
       {/* Shopping Recommendations */}
       {activeTab === 'compras' && (
         <div className="space-y-3">
-          <p className="text-sm text-apple-gray-1 mb-3">
+          <p className="text-sm text-apple-gray-1 dark:text-gray-400 mb-3">
             Basado en tu despensa actual, te recomendamos comprar:
           </p>
           {recommendations.map((rec, i) => (

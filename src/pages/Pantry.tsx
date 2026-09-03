@@ -93,7 +93,7 @@ const Pantry: React.FC = () => {
           className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all ${
             selectedCategory === undefined
               ? 'bg-apple-blue text-white shadow-apple'
-              : 'bg-gray-100 text-gray-600'
+              : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/20'
           }`}
         >
           Todos
@@ -108,7 +108,7 @@ const Pantry: React.FC = () => {
               className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap ${
                 selectedCategory === cat
                   ? 'bg-apple-blue text-white shadow-apple'
-                  : 'bg-gray-100 text-gray-600'
+                  : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/20'
               }`}
             >
               {meta.emoji} {meta.label} {count > 0 && `(${count})`}
@@ -129,8 +129,8 @@ const Pantry: React.FC = () => {
               >
                 <span className="text-2xl">{catMeta.emoji}</span>
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-gray-900 truncate">{item.name}</p>
-                  <p className="text-sm text-apple-gray-1">
+                  <p className="font-medium text-gray-900 dark:text-white truncate">{item.name}</p>
+                  <p className="text-sm text-apple-gray-1 dark:text-gray-400">
                     {item.quantity} {item.unit}
                   </p>
                 </div>
@@ -155,8 +155,8 @@ const Pantry: React.FC = () => {
         ) : (
           <div className="empty-state">
             <span className="text-5xl mb-4">🛒</span>
-            <h3 className="text-lg font-semibold text-gray-900 mb-1">Despensa vacía</h3>
-            <p className="text-sm text-apple-gray-1 mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Despensa vacía</h3>
+            <p className="text-sm text-apple-gray-1 dark:text-gray-400 mb-4">
               Agrega los productos que compraste para el mes
             </p>
             <button
