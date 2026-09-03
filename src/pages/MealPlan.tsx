@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { format, addDays, startOfWeek, isSameDay } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Wand2, RefreshCw, ChevronLeft, ChevronRight, Check } from 'lucide-react';
+import { Wand2, RefreshCw, ChevronLeft, ChevronRight, Check, FileText, FileSpreadsheet, Download } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, type MealPlanEntry, type Recipe } from '../db';
 import { generateAndSaveDailyPlan, generateAndSaveWeeklyPlan, regenerateSingleMeal, getDailyNutrition } from '../utils/mealPlanner';
+import { exportWeeklyPlanToPDF, exportWeeklyPlanToExcel } from '../utils/exportUtils';
 import EditMealSheet from '../components/meal-plan/EditMealSheet';
 
 const MEAL_TYPES = [
@@ -19,6 +20,7 @@ const MealPlan: React.FC = () => {
   );
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isGenerating, setIsGenerating] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
   const [editSheet, setEditSheet] = useState<{
     isOpen: boolean;
     mealType: 'breakfast' | 'lunch' | 'dinner';
@@ -36,11 +38,36 @@ const MealPlan: React.FC = () => {
     [selectedDateStr]
   );
 
+  const allWeekMeals = useLiveQuery(
+    () => db.mealPlans.where('date').anyOf(weekDatesStr).toArray(),
+    [weekDatesStr.join(',')]
+  );
+
   const recipes = useLiveQuery(() => db.recipes.toArray());
 
   useEffect(() => {
     getDailyNutrition(selectedDateStr).then(setNutrition);
   }, [selectedDateStr, dayMeals]);
+
+  const handleExportPDF = () => {
+    if (!allWeekMeals || !recipes) return;
+    exportWeeklyPlanToPDF({
+      days: weekDays,
+      meals: allWeekMeals,
+      recipes: recipes
+    });
+    setShowExportMenu(false);
+  };
+
+  const handleExportExcel = () => {
+    if (!allWeekMeals || !recipes) return;
+    exportWeeklyPlanToExcel({
+      days: weekDays,
+      meals: allWeekMeals,
+      recipes: recipes
+    });
+    setShowExportMenu(false);
+  };
 
   const handleGenerateWeek = async () => {
     setIsGenerating(true);
@@ -89,14 +116,53 @@ const MealPlan: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h1 className="apple-large-title">Plan Semanal</h1>
-        <button
-          onClick={handleGenerateWeek}
-          disabled={isGenerating}
-          className="apple-btn-primary text-sm py-2 px-4"
-        >
-          <Wand2 className="w-4 h-4 mr-1.5" />
-          {isGenerating ? 'Generando...' : 'Generar'}
-        </button>
+        <div className="flex items-center gap-2 relative">
+          <div className="relative">
+            <button
+              onClick={() => setShowExportMenu(!showExportMenu)}
+              className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-apple-sm text-xs font-semibold flex items-center gap-1.5 transition-colors active:scale-95"
+              title="Descargar Menú Semanal"
+            >
+              <Download className="w-4 h-4 text-apple-blue" />
+              <span>Exportar</span>
+            </button>
+
+            {/* Export Dropdown Menu */}
+            {showExportMenu && (
+              <>
+                <div 
+                  className="fixed inset-0 z-20" 
+                  onClick={() => setShowExportMenu(false)} 
+                />
+                <div className="absolute right-0 mt-2 w-48 bg-white/95 backdrop-blur-md rounded-apple-sm shadow-apple-lg border border-gray-100 py-1.5 z-30 animate-scale-in">
+                  <button
+                    onClick={handleExportPDF}
+                    className="w-full px-4 py-2.5 text-left text-xs font-medium text-gray-800 hover:bg-apple-blue/10 hover:text-apple-blue flex items-center gap-2.5 transition-colors"
+                  >
+                    <FileText className="w-4 h-4 text-apple-red" />
+                    <span>Descargar en PDF</span>
+                  </button>
+                  <button
+                    onClick={handleExportExcel}
+                    className="w-full px-4 py-2.5 text-left text-xs font-medium text-gray-800 hover:bg-apple-blue/10 hover:text-apple-blue flex items-center gap-2.5 transition-colors"
+                  >
+                    <FileSpreadsheet className="w-4 h-4 text-apple-green" />
+                    <span>Descargar en Excel (.xlsx)</span>
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+
+          <button
+            onClick={handleGenerateWeek}
+            disabled={isGenerating}
+            className="apple-btn-primary text-sm py-2 px-4"
+          >
+            <Wand2 className="w-4 h-4 mr-1.5" />
+            {isGenerating ? 'Generando...' : 'Generar'}
+          </button>
+        </div>
       </div>
 
       {/* Week Selector */}

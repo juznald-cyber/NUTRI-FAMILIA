@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { UserPlus, Edit3, Trash2, Save, X, Users } from 'lucide-react';
+import { UserPlus, Edit3, Trash2, Save, X, Users, LogOut, ShieldCheck } from 'lucide-react';
 import { useFamilyMembers, addFamilyMember, updateFamilyMember, deleteFamilyMember } from '../hooks/useDatabase';
+import { useAuth } from '../context/AuthContext';
 import type { FamilyMember } from '../db';
 
 const EMOJI_OPTIONS = ['👨', '👩', '👦', '👧', '👶', '🧓', '👴', '👵', '🐕', '🐱'];
@@ -12,6 +13,7 @@ const RESTRICTION_OPTIONS = [
 ];
 
 const Family: React.FC = () => {
+  const { user, isGuest, signOut } = useAuth();
   const members = useFamilyMembers();
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -261,12 +263,39 @@ const Family: React.FC = () => {
         )}
       </div>
 
+      {/* Account Profile Card */}
+      <div className="mt-8 apple-card p-5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-apple-blue/15 text-apple-blue flex items-center justify-center font-bold text-sm">
+              {user?.displayName ? user.displayName.charAt(0).toUpperCase() : (user?.email ? user.email.charAt(0).toUpperCase() : '👤')}
+            </div>
+            <div>
+              <p className="font-semibold text-gray-900 text-sm">
+                {user?.displayName || (isGuest ? 'Modo Invitado' : 'Usuario')}
+              </p>
+              <p className="text-xs text-apple-gray-1">
+                {user?.email || (isGuest ? 'Sesión local sin cuenta' : '')}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => signOut()}
+            className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-apple-red text-xs font-semibold rounded-full flex items-center gap-1.5 transition-colors"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span>Cerrar Sesión</span>
+          </button>
+        </div>
+        <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-2 text-[11px] text-apple-gray-2">
+          <ShieldCheck className="w-4 h-4 text-apple-green" />
+          <span>Datos cifrados y aislados en tu cuenta privada de Firebase.</span>
+        </div>
+      </div>
+
       {/* App Info */}
-      <div className="mt-8 text-center">
-        <p className="text-xs text-apple-gray-2">NutriFamilia v1.0</p>
-        <p className="text-xs text-apple-gray-2 mt-0.5">
-          Tus datos se guardan localmente en este dispositivo
-        </p>
+      <div className="mt-6 text-center">
+        <p className="text-xs text-apple-gray-2">NutriFamilia v1.2 · Cloud Edition</p>
       </div>
     </div>
   );
