@@ -1,8 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Camera, Image as ImageIcon, X, Check, Sparkles, Plus, Minus, Search, RefreshCw } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Camera, Image as ImageIcon, X, Check, Sparkles, Plus, Minus, Search, RotateCcw } from 'lucide-react';
 import { PANTRY_CATEGORIES, UNITS, type PantryCategory } from '../../db';
 import { addPantryItem } from '../../hooks/useDatabase';
-import { recognizeFoodFromImage, findFoodByName, type RecognizedFood } from '../../utils/foodRecognition';
+import { recognizeFoodFromImage, type RecognizedFood } from '../../utils/foodRecognition';
 import { foods, type FoodItem } from '../../data/foods';
 
 interface ScanFoodModalProps {
@@ -12,9 +12,6 @@ interface ScanFoodModalProps {
 }
 
 export default function ScanFoodModal({ isOpen, onClose, onItemAdded }: ScanFoodModalProps) {
-  const [stream, setStream] = useState<MediaStream | null>(null);
-  const [isCameraActive, setIsCameraActive] = useState(false);
-  const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
   const [analyzing, setAnalyzing] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [result, setResult] = useState<RecognizedFood | null>(null);
@@ -22,98 +19,19 @@ export default function ScanFoodModal({ isOpen, onClose, onItemAdded }: ScanFood
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchSuggestions, setShowSearchSuggestions] = useState(false);
 
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Initialize live video stream
-  const startCamera = async () => {
-    try {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-      }
-      const constraints: MediaStreamConstraints = {
-        video: {
-          facingMode: { ideal: facingMode },
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        },
-        audio: false
-      };
+  if (!isOpen) return null;
 
-      const newStream = await navigator.mediaDevices.getUserMedia(constraints);
-      setStream(newStream);
-
-      if (videoRef.current) {
-        const video = videoRef.current;
-        video.srcObject = newStream;
-        video.setAttribute('playsinline', 'true');
-        video.setAttribute('autoplay', 'true');
-        video.setAttribute('muted', 'true');
-        video.onloadedmetadata = () => {
-          video.play().catch(e => console.log('Video play error', e));
-        };
-      }
-      setIsCameraActive(true);
-    } catch (err) {
-      console.warn('Live camera stream not supported or permission denied. Native capture available.', err);
-      setIsCameraActive(false);
-    }
-  };
-
-  const stopCamera = () => {
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-      setStream(null);
-    }
-    setIsCameraActive(false);
-  };
-
-  useEffect(() => {
-    if (isOpen) {
-      setCapturedImage(null);
-      setResult(null);
-      setSavedSuccess(false);
-      setSearchQuery('');
-      startCamera();
-    } else {
-      stopCamera();
-    }
-    return () => stopCamera();
-  }, [isOpen, facingMode]);
-
-  // Capture frame from video stream
-  const handleCaptureFrame = async () => {
-    if (!videoRef.current) return;
-    setAnalyzing(true);
-
-    const video = videoRef.current;
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth || 640;
-    canvas.height = video.videoHeight || 480;
-    const ctx = canvas.getContext('2d');
-
-    if (ctx) {
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const dataUrl = canvas.toDataURL('image/jpeg');
-      setCapturedImage(dataUrl);
-
-      const recognized = await recognizeFoodFromImage(video);
-      setTimeout(() => {
-        setResult(recognized);
-        setAnalyzing(false);
-      }, 500);
-    } else {
-      setAnalyzing(false);
-    }
-  };
-
-  // Process photo selected from camera or gallery
-  const handlePhotoFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Process photo selected from native camera or gallery
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setAnalyzing(true);
+    setResult(null);
+
     const reader = new FileReader();
     reader.onload = async () => {
       const dataUrl = reader.result as string;
@@ -126,10 +44,13 @@ export default function ScanFoodModal({ isOpen, onClose, onItemAdded }: ScanFood
         setTimeout(() => {
           setResult(recognized);
           setAnalyzing(false);
-        }, 500);
+        }, 600);
       };
     };
     reader.readAsDataURL(file);
+
+    // Reset input so user can choose the same file again if needed
+    e.target.value = '';
   };
 
   // Switch to a candidate suggestion
@@ -177,15 +98,16 @@ export default function ScanFoodModal({ isOpen, onClose, onItemAdded }: ScanFood
       setResult(null);
       setSavedSuccess(false);
       setSearchQuery('');
-      if (!isCameraActive) startCamera();
+      onClose();
     }, 1200);
   };
 
-  const toggleFacingMode = () => {
-    setFacingMode(prev => prev === 'environment' ? 'user' : 'environment');
+  const handleReset = () => {
+    setCapturedImage(null);
+    setResult(null);
+    setAnalyzing(false);
+    setSearchQuery('');
   };
-
-  if (!isOpen) return null;
 
   return (
     <>
@@ -218,66 +140,6 @@ export default function ScanFoodModal({ isOpen, onClose, onItemAdded }: ScanFood
 
         <div className="px-5 pb-8 space-y-4">
           
-          {/* Camera Viewfinder / Preview Frame */}
-          <div className="relative w-full aspect-square bg-black rounded-apple-lg overflow-hidden border border-black/10 dark:border-white/10 shadow-apple-lg flex items-center justify-center">
-            {capturedImage ? (
-              <img src={capturedImage} alt="Foto capturada" className="w-full h-full object-cover animate-fade-in" />
-            ) : isCameraActive ? (
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                muted
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="text-center p-6 space-y-3">
-                <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto text-apple-green">
-                  <Camera className="w-8 h-8" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-white">Cámara lista</p>
-                  <p className="text-xs text-gray-400 mt-0.5">Toca el botón abajo para abrir la cámara de tu dispositivo</p>
-                </div>
-              </div>
-            )}
-
-            {/* Scanning Laser Line Overlay */}
-            {analyzing && (
-              <div className="absolute inset-0 bg-apple-blue/15 backdrop-blur-[2px] flex flex-col items-center justify-center">
-                <div className="w-full h-1 bg-gradient-to-r from-transparent via-apple-blue to-transparent animate-pulse shadow-lg" />
-                <div className="mt-4 px-4 py-2 bg-black/70 backdrop-blur-md rounded-full text-white text-xs font-semibold flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-apple-green animate-spin" />
-                  <span>Analizando alimento y macros...</span>
-                </div>
-              </div>
-            )}
-
-            {/* Camera Viewfinder Frame Marks */}
-            {!capturedImage && isCameraActive && (
-              <div className="absolute inset-6 border-2 border-white/40 rounded-apple pointer-events-none">
-                <div className="absolute -top-1 -left-1 w-4 h-4 border-t-2 border-l-2 border-white" />
-                <div className="absolute -top-1 -right-1 w-4 h-4 border-t-2 border-r-2 border-white" />
-                <div className="absolute -bottom-1 -left-1 w-4 h-4 border-b-2 border-l-2 border-white" />
-                <div className="absolute -bottom-1 -right-1 w-4 h-4 border-b-2 border-r-2 border-white" />
-              </div>
-            )}
-
-            {/* Camera Switch button (when active) */}
-            {!capturedImage && isCameraActive && (
-              <div className="absolute top-3 right-3">
-                <button
-                  type="button"
-                  onClick={toggleFacingMode}
-                  className="w-9 h-9 bg-black/60 backdrop-blur-md text-white rounded-full flex items-center justify-center hover:bg-black/80 transition-colors"
-                  title="Girar cámara"
-                >
-                  <RefreshCw className="w-4 h-4" />
-                </button>
-              </div>
-            )}
-          </div>
-
           {/* Hidden File Inputs for Native Camera & Gallery */}
           <input
             ref={cameraInputRef}
@@ -285,7 +147,7 @@ export default function ScanFoodModal({ isOpen, onClose, onItemAdded }: ScanFood
             accept="image/*"
             capture="environment"
             className="hidden"
-            onChange={handlePhotoFile}
+            onChange={handlePhotoUpload}
           />
 
           <input
@@ -293,36 +155,57 @@ export default function ScanFoodModal({ isOpen, onClose, onItemAdded }: ScanFood
             type="file"
             accept="image/*"
             className="hidden"
-            onChange={handlePhotoFile}
+            onChange={handlePhotoUpload}
           />
 
-          {/* Action Buttons: Shutter / Native Camera / Gallery */}
-          {!result && !analyzing && (
-            <div className="flex items-center justify-center gap-4 pt-1">
+          {/* Initial State: Choose Camera or Gallery */}
+          {!capturedImage && !analyzing && (
+            <div className="space-y-3 pt-1">
+              <button
+                type="button"
+                onClick={() => cameraInputRef.current?.click()}
+                className="w-full p-5 bg-gradient-to-r from-apple-green to-apple-teal text-white rounded-apple-lg flex items-center gap-4 shadow-apple hover:opacity-95 active:scale-98 transition-all"
+              >
+                <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+                  <Camera className="w-6 h-6 text-white" />
+                </div>
+                <div className="text-left">
+                  <h3 className="font-bold text-base">Tomar Foto con la Cámara</h3>
+                  <p className="text-xs text-white/85 mt-0.5">Abre la cámara de tu teléfono o laptop para capturar el producto</p>
+                </div>
+              </button>
+
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="px-4 py-3 bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-200 rounded-apple-sm text-xs font-semibold flex items-center gap-2 hover:bg-gray-200 dark:hover:bg-white/20 transition-colors active:scale-95"
+                className="w-full p-4 bg-gray-100 dark:bg-white/10 text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-white/15 rounded-apple-lg flex items-center gap-4 transition-all active:scale-98 border border-black/5 dark:border-white/10"
               >
-                <ImageIcon className="w-4 h-4 text-apple-blue" />
-                <span>Galería</span>
+                <div className="w-10 h-10 rounded-full bg-apple-blue/15 text-apple-blue flex items-center justify-center flex-shrink-0">
+                  <ImageIcon className="w-5 h-5" />
+                </div>
+                <div className="text-left">
+                  <h3 className="font-semibold text-sm">Seleccionar de la Galería</h3>
+                  <p className="text-xs text-apple-gray-1 dark:text-gray-400 mt-0.5">Elige una foto guardada en tu dispositivo</p>
+                </div>
               </button>
+            </div>
+          )}
 
-              {/* Shutter Button (Live or Native) */}
-              <button
-                type="button"
-                onClick={() => {
-                  if (isCameraActive) {
-                    handleCaptureFrame();
-                  } else {
-                    cameraInputRef.current?.click();
-                  }
-                }}
-                className="px-5 py-3 bg-apple-green text-white rounded-apple-sm text-xs font-semibold flex items-center gap-2 shadow-apple hover:bg-green-600 active:scale-95 transition-all"
-              >
-                <Camera className="w-4 h-4" />
-                <span>{isCameraActive ? 'Capturar Foto' : 'Abrir Cámara'}</span>
-              </button>
+          {/* Image Preview & Scanning Box */}
+          {capturedImage && (
+            <div className="relative w-full aspect-square bg-black rounded-apple-lg overflow-hidden border border-black/10 dark:border-white/10 shadow-apple-lg flex items-center justify-center">
+              <img src={capturedImage} alt="Foto capturada" className="w-full h-full object-cover animate-fade-in" />
+
+              {/* Scanning Laser Beam Overlay */}
+              {analyzing && (
+                <div className="absolute inset-0 bg-apple-blue/15 backdrop-blur-[2px] flex flex-col items-center justify-center">
+                  <div className="w-full h-1 bg-gradient-to-r from-transparent via-apple-blue to-transparent animate-pulse shadow-lg" />
+                  <div className="mt-4 px-4 py-2 bg-black/70 backdrop-blur-md rounded-full text-white text-xs font-semibold flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-apple-green animate-spin" />
+                    <span>Analizando alimento y macros...</span>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -381,7 +264,7 @@ export default function ScanFoodModal({ isOpen, onClose, onItemAdded }: ScanFood
                       setSearchQuery(e.target.value);
                       setShowSearchSuggestions(true);
                     }}
-                    placeholder="O busca otro alimento en el catálogo..."
+                    placeholder="O escribe el nombre si deseas cambiarlo..."
                     className="apple-input pl-8 py-1.5 text-xs w-full"
                   />
                 </div>
@@ -444,14 +327,11 @@ export default function ScanFoodModal({ isOpen, onClose, onItemAdded }: ScanFood
               <div className="pt-2 flex gap-2">
                 <button
                   type="button"
-                  onClick={() => {
-                    setCapturedImage(null);
-                    setResult(null);
-                    setSearchQuery('');
-                  }}
-                  className="flex-1 py-3 px-3 bg-gray-100 hover:bg-gray-200 dark:bg-white/10 dark:hover:bg-white/20 text-gray-700 dark:text-gray-200 rounded-apple-sm text-xs font-semibold transition-colors"
+                  onClick={handleReset}
+                  className="flex-1 py-3 px-3 bg-gray-100 hover:bg-gray-200 dark:bg-white/10 dark:hover:bg-white/20 text-gray-700 dark:text-gray-200 rounded-apple-sm text-xs font-semibold transition-colors flex items-center justify-center gap-1.5"
                 >
-                  Tomar otra
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Otra foto</span>
                 </button>
 
                 <button
