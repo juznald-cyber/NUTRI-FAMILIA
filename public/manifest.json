@@ -1,0 +1,27 @@
+{
+  "name": "NutriFamilia - Planificador & Salud",
+  "short_name": "NutriFamilia",
+  "description": "Planificador de comidas familiar, despensa inteligente y control de salud",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#34C759",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["food", "health", "lifestyle", "productivity"],
+  "lang": "es"
+}

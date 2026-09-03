@@ -263,31 +263,57 @@ const Family: React.FC = () => {
         )}
       </div>
 
+      {/* Install App Section */}
+      <div className="mt-8 apple-card p-5 bg-gradient-to-r from-apple-green/10 to-apple-teal/10 dark:from-apple-green/20 dark:to-apple-teal/20 border border-apple-green/20">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <img src="favicon.svg" alt="App Logo" className="w-11 h-11 rounded-apple shadow-apple" />
+            <div>
+              <p className="font-bold text-gray-900 dark:text-white text-sm">
+                Instalar NutriFamilia
+              </p>
+              <p className="text-xs text-apple-gray-1 dark:text-gray-300 mt-0.5">
+                Acceso directo desde tu pantalla de inicio
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              const evt = new CustomEvent('open-install-pwa');
+              window.dispatchEvent(evt);
+            }}
+            className="px-3.5 py-2 bg-apple-green text-white text-xs font-bold rounded-full shadow-apple active:scale-95 transition-all"
+          >
+            Instalar
+          </button>
+        </div>
+      </div>
+
       {/* Account Profile Card */}
-      <div className="mt-8 apple-card p-5">
+      <div className="mt-4 apple-card p-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-apple-blue/15 text-apple-blue flex items-center justify-center font-bold text-sm">
               {user?.displayName ? user.displayName.charAt(0).toUpperCase() : (user?.email ? user.email.charAt(0).toUpperCase() : '👤')}
             </div>
             <div>
-              <p className="font-semibold text-gray-900 text-sm">
+              <p className="font-semibold text-gray-900 dark:text-white text-sm">
                 {user?.displayName || (isGuest ? 'Modo Invitado' : 'Usuario')}
               </p>
-              <p className="text-xs text-apple-gray-1">
+              <p className="text-xs text-apple-gray-1 dark:text-gray-400">
                 {user?.email || (isGuest ? 'Sesión local sin cuenta' : '')}
               </p>
             </div>
           </div>
           <button
             onClick={() => signOut()}
-            className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-apple-red text-xs font-semibold rounded-full flex items-center gap-1.5 transition-colors"
+            className="px-3 py-1.5 bg-red-50 dark:bg-red-950/50 hover:bg-red-100 text-apple-red text-xs font-semibold rounded-full flex items-center gap-1.5 transition-colors"
           >
             <LogOut className="w-3.5 h-3.5" />
             <span>Cerrar Sesión</span>
           </button>
         </div>
-        <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-2 text-[11px] text-apple-gray-2">
+        <div className="mt-3 pt-3 border-t border-gray-100 dark:border-white/5 flex items-center gap-2 text-[11px] text-apple-gray-2 dark:text-gray-400">
           <ShieldCheck className="w-4 h-4 text-apple-green" />
           <span>Datos cifrados y aislados en tu cuenta privada de Firebase.</span>
         </div>
@@ -295,7 +321,7 @@ const Family: React.FC = () => {
 
       {/* App Info */}
       <div className="mt-6 text-center">
-        <p className="text-xs text-apple-gray-2">NutriFamilia v1.2 · Cloud Edition</p>
+        <p className="text-xs text-apple-gray-2 dark:text-gray-500">NutriFamilia v1.3 · Progressive Web App (PWA)</p>
       </div>
     </div>
   );

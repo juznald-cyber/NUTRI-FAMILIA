@@ -76,9 +76,11 @@ export default function Login() {
         
         {/* Brand Header */}
         <div className="text-center mb-8">
-          <div className="w-20 h-20 bg-gradient-to-tr from-apple-green to-apple-teal rounded-3xl mx-auto flex items-center justify-center shadow-apple mb-4 transform hover:scale-105 transition-transform duration-300">
-            <span className="text-4xl">🍏</span>
-          </div>
+          <img
+            src="favicon.svg"
+            alt="NutriFamilia Logo"
+            className="w-20 h-20 rounded-3xl mx-auto shadow-apple mb-4 transform hover:scale-105 transition-transform duration-300"
+          />
           <h1 className="apple-large-title text-gray-900 tracking-tight">NutriFamilia</h1>
           <p className="text-sm text-apple-gray-1 mt-1.5">
             Alimentación balanceada y salud para tu familia
