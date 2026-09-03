@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { Plus, Search, Trash2, Edit3 } from 'lucide-react';
+import { Plus, Search, Trash2, Edit3, Camera, FileSpreadsheet } from 'lucide-react';
 import { usePantryItems, deletePantryItem } from '../hooks/useDatabase';
 import { PANTRY_CATEGORIES, type PantryCategory, type PantryItem } from '../db';
 import PantryItemForm from '../components/pantry/PantryItemForm';
+import ScanFoodModal from '../components/pantry/ScanFoodModal';
+import ImportExcelModal from '../components/pantry/ImportExcelModal';
 
 const ALL_CATEGORIES = Object.keys(PANTRY_CATEGORIES) as PantryCategory[];
 
@@ -10,6 +12,8 @@ const Pantry: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<PantryCategory | undefined>(undefined);
   const [searchQuery, setSearchQuery] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isScanModalOpen, setIsScanModalOpen] = useState(false);
+  const [isImportExcelModalOpen, setIsImportExcelModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<PantryItem | undefined>(undefined);
 
   const pantryItems = usePantryItems(selectedCategory);
@@ -62,16 +66,39 @@ const Pantry: React.FC = () => {
       <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="apple-large-title">Despensa</h1>
-          <p className="text-sm text-apple-gray-1 mt-0.5">
-            {allItems?.length || 0} productos en total
+          <p className="text-sm text-apple-gray-1 dark:text-gray-400 mt-0.5">
+            {allItems?.length || 0} productos registrados
           </p>
         </div>
-        <button
-          onClick={handleAdd}
-          className="w-10 h-10 bg-apple-blue rounded-full flex items-center justify-center shadow-apple active:scale-95 transition-transform"
-        >
-          <Plus className="w-5 h-5 text-white" />
-        </button>
+
+        {/* Quick Action Buttons */}
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => setIsScanModalOpen(true)}
+            className="px-3 py-2 bg-apple-green/10 hover:bg-apple-green/20 text-apple-green dark:bg-apple-green/20 dark:hover:bg-apple-green/30 rounded-apple-sm text-xs font-semibold flex items-center gap-1.5 transition-all active:scale-95 shadow-sm"
+            title="Escanear alimento con la cámara o foto"
+          >
+            <Camera className="w-4 h-4" />
+            <span className="hidden sm:inline">Foto</span>
+          </button>
+
+          <button
+            onClick={() => setIsImportExcelModalOpen(true)}
+            className="px-3 py-2 bg-apple-blue/10 hover:bg-apple-blue/20 text-apple-blue dark:bg-apple-blue/20 dark:hover:bg-apple-blue/30 rounded-apple-sm text-xs font-semibold flex items-center gap-1.5 transition-all active:scale-95 shadow-sm"
+            title="Importar despensa masiva con Excel"
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            <span className="hidden sm:inline">Excel</span>
+          </button>
+
+          <button
+            onClick={handleAdd}
+            className="w-9 h-9 bg-apple-blue rounded-full flex items-center justify-center shadow-apple active:scale-95 transition-transform"
+            title="Agregar producto manualmente"
+          >
+            <Plus className="w-4 h-4 text-white" />
+          </button>
+        </div>
       </div>
 
       {/* Search */}
@@ -157,24 +184,45 @@ const Pantry: React.FC = () => {
             <span className="text-5xl mb-4">🛒</span>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Despensa vacía</h3>
             <p className="text-sm text-apple-gray-1 dark:text-gray-400 mb-4">
-              Agrega los productos que compraste para el mes
+              Agrega tus productos tomando una foto, con Excel o manualmente
             </p>
-            <button
-              onClick={handleAdd}
-              className="apple-btn-primary"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Agregar Producto
-            </button>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <button
+                onClick={() => setIsScanModalOpen(true)}
+                className="apple-btn bg-apple-green text-white shadow-apple"
+              >
+                <Camera className="w-4 h-4 mr-1.5" />
+                Tomar Foto
+              </button>
+              <button
+                onClick={() => setIsImportExcelModalOpen(true)}
+                className="apple-btn bg-apple-blue text-white shadow-apple"
+              >
+                <FileSpreadsheet className="w-4 h-4 mr-1.5" />
+                Cargar Excel
+              </button>
+            </div>
           </div>
         )}
       </div>
 
-      {/* Form Sheet */}
+      {/* Manual Add/Edit Form Sheet */}
       <PantryItemForm
         isOpen={isFormOpen}
         onClose={handleCloseForm}
         editItem={editingItem}
+      />
+
+      {/* Photo Scanner Modal */}
+      <ScanFoodModal
+        isOpen={isScanModalOpen}
+        onClose={() => setIsScanModalOpen(false)}
+      />
+
+      {/* Excel Bulk Importer Modal */}
+      <ImportExcelModal
+        isOpen={isImportExcelModalOpen}
+        onClose={() => setIsImportExcelModalOpen(false)}
       />
     </div>
   );
