@@ -63,11 +63,11 @@ export default function PantryItemForm({ isOpen, onClose, editItem }: PantryItem
         <div className="sheet-handle" />
 
         <div className="px-5 pb-2 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-gray-900">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white">
             {editItem ? 'Editar Producto' : 'Agregar Producto'}
           </h2>
-          <button onClick={onClose} className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-            <X className="w-4 h-4 text-gray-500" />
+          <button onClick={onClose} className="w-8 h-8 bg-gray-100 dark:bg-white/10 rounded-full flex items-center justify-center hover:bg-gray-200 dark:hover:bg-white/20 transition-colors">
+            <X className="w-4 h-4 text-gray-500 dark:text-gray-300" />
           </button>
         </div>
 

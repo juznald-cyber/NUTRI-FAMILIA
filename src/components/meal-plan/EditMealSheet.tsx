@@ -109,29 +109,33 @@ export default function EditMealSheet({ isOpen, onClose, date, mealType, existin
 
         {/* Header */}
         <div className="px-5 pb-4 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-gray-900">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white">
             {existingEntry ? 'Editar' : 'Agregar'} {MEAL_LABELS[mealType]}
           </h2>
-          <button onClick={onClose} className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-            <X className="w-4 h-4 text-gray-500" />
+          <button onClick={onClose} className="w-8 h-8 bg-gray-100 dark:bg-white/10 rounded-full flex items-center justify-center hover:bg-gray-200 dark:hover:bg-white/20 transition-colors">
+            <X className="w-4 h-4 text-gray-500 dark:text-gray-300" />
           </button>
         </div>
 
         {/* Mode Toggle */}
         <div className="px-5 mb-4">
-          <div className="flex bg-apple-gray-6 rounded-apple-sm p-1">
+          <div className="flex bg-apple-gray-6 dark:bg-white/10 rounded-apple-sm p-1">
             <button
               onClick={() => setMode('select')}
-              className={`flex-1 py-2 rounded-[10px] text-sm font-semibold transition-all ${
-                mode === 'select' ? 'bg-white text-gray-900 shadow-apple' : 'text-apple-gray-1'
+              className={`flex-1 py-2.5 rounded-[10px] text-sm font-semibold transition-all ${
+                mode === 'select'
+                  ? 'bg-white dark:bg-[#2C2C2E] text-gray-900 dark:text-white shadow-apple'
+                  : 'text-apple-gray-1 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
               }`}
             >
               Seleccionar Receta
             </button>
             <button
               onClick={() => setMode('custom')}
-              className={`flex-1 py-2 rounded-[10px] text-sm font-semibold transition-all ${
-                mode === 'custom' ? 'bg-white text-gray-900 shadow-apple' : 'text-apple-gray-1'
+              className={`flex-1 py-2.5 rounded-[10px] text-sm font-semibold transition-all ${
+                mode === 'custom'
+                  ? 'bg-white dark:bg-[#2C2C2E] text-gray-900 dark:text-white shadow-apple'
+                  : 'text-apple-gray-1 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
               }`}
             >
               Comida Personalizada
@@ -160,19 +164,19 @@ export default function EditMealSheet({ isOpen, onClose, date, mealType, existin
                   <button
                     key={recipe.id}
                     onClick={() => recipe.id && handleSelectRecipe(recipe.id)}
-                    className="w-full apple-card p-3 flex items-center gap-3 text-left hover:bg-gray-50 transition-colors"
+                    className="w-full apple-card p-3.5 flex items-center gap-3 text-left hover:bg-gray-50 dark:hover:bg-white/10 transition-colors border border-transparent dark:border-white/5"
                   >
                     <span className="text-2xl">{recipe.emoji}</span>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-gray-900 text-sm truncate">{recipe.name}</p>
-                      <p className="text-xs text-apple-gray-1">
+                      <p className="font-semibold text-gray-900 dark:text-white text-sm truncate">{recipe.name}</p>
+                      <p className="text-xs text-apple-gray-1 dark:text-gray-400 mt-0.5">
                         {recipe.calories} kcal · {recipe.prepTime} min · {recipe.difficulty}
                       </p>
                     </div>
                   </button>
                 ))}
                 {filteredRecipes.length === 0 && (
-                  <p className="text-center text-apple-gray-2 py-8 text-sm">
+                  <p className="text-center text-apple-gray-2 dark:text-gray-400 py-8 text-sm">
                     No se encontraron recetas
                   </p>
                 )}
@@ -249,7 +253,7 @@ export default function EditMealSheet({ isOpen, onClose, date, mealType, existin
           {existingEntry && (
             <button
               onClick={handleDelete}
-              className="w-full mt-4 py-3 text-apple-red text-sm font-medium hover:bg-red-50 rounded-apple-sm transition-colors"
+              className="w-full mt-4 py-3 text-apple-red text-sm font-medium hover:bg-red-50 dark:hover:bg-red-950/30 rounded-apple-sm transition-colors"
             >
               Eliminar esta comida
             </button>

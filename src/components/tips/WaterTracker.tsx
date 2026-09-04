@@ -20,31 +20,48 @@ export default function WaterTracker() {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Droplets className="w-5 h-5 text-apple-blue" />
-          <h3 className="font-semibold text-gray-900">Hidratación</h3>
+          <h3 className="font-semibold text-gray-900 dark:text-white">Hidratación</h3>
         </div>
-        <span className="text-sm text-apple-blue font-medium">
-          {glasses} de {goal} vasos
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-apple-blue font-medium">
+            {glasses} de {goal} vasos
+          </span>
+          {glasses > 0 && (
+            <button
+              type="button"
+              onClick={() => setWaterLog(today, 0, goal)}
+              className="text-xs text-apple-gray-1 dark:text-gray-400 hover:text-apple-red dark:hover:text-apple-red transition-colors px-1.5 py-0.5 rounded bg-gray-100 dark:bg-white/10"
+              title="Reiniciar a 0 vasos"
+            >
+              Limpiar
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="flex gap-2 justify-between">
-        {Array.from({ length: goal }, (_, i) => (
-          <button
-            key={i}
-            onClick={() => handleTap(i)}
-            className={`flex-1 h-12 rounded-apple-sm flex items-center justify-center transition-all duration-300 ${
-              i < glasses
-                ? 'bg-apple-blue/15 text-apple-blue scale-105'
-                : 'bg-gray-100 text-gray-300 hover:bg-gray-200'
-            }`}
-          >
-            <Droplets className="w-5 h-5" />
-          </button>
-        ))}
+        {Array.from({ length: goal }, (_, i) => {
+          const isFilled = i < glasses;
+          return (
+            <button
+              key={i}
+              type="button"
+              onClick={() => handleTap(i)}
+              className={`flex-1 h-12 rounded-apple-sm flex items-center justify-center transition-all duration-300 active:scale-95 ${
+                isFilled
+                  ? 'bg-apple-blue/20 text-apple-blue dark:bg-apple-blue/30 ring-1 ring-apple-blue/50 scale-105'
+                  : 'bg-gray-100 dark:bg-white/10 text-gray-300 dark:text-gray-600 hover:bg-gray-200 dark:hover:bg-white/20'
+              }`}
+              title={isFilled ? `Desmarcar hasta vaso ${i}` : `Marcar ${i + 1} vasos`}
+            >
+              <Droplets className="w-5 h-5" />
+            </button>
+          );
+        })}
       </div>
 
       {/* Progress bar */}
-      <div className="mt-3 w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+      <div className="mt-3 w-full h-2 bg-gray-100 dark:bg-white/10 rounded-full overflow-hidden">
         <div
           className="h-full bg-apple-blue rounded-full transition-all duration-500"
           style={{ width: `${(glasses / goal) * 100}%` }}

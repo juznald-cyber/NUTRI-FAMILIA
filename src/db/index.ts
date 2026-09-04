@@ -71,7 +71,12 @@ export interface FamilyMember {
   id?: number;
   name: string;
   emoji: string;
+  birthDate?: string;
   age: number;
+  gender?: 'male' | 'female';
+  weightKg?: number;
+  heightCm?: number;
+  activityLevel?: 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active';
   calorieGoal: number;
   restrictions: string[];
 }

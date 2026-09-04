@@ -65,7 +65,7 @@ const Tips: React.FC = () => {
                 <span className="text-2xl">{rec.emoji}</span>
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-gray-900">{rec.label}</h3>
+                    <h3 className="font-semibold text-gray-900 dark:text-white">{rec.label}</h3>
                     <span className={`apple-badge ${
                       rec.status === 'bueno' ? 'stock-high' :
                       rec.status === 'bajo' ? 'stock-medium' : 'stock-low'
@@ -74,15 +74,15 @@ const Tips: React.FC = () => {
                        rec.status === 'bajo' ? '⚠ Bajo' : '✗ Vacío'}
                     </span>
                   </div>
-                  <p className="text-sm text-apple-gray-1 mt-0.5">{rec.message}</p>
+                  <p className="text-sm text-apple-gray-1 dark:text-gray-400 mt-0.5">{rec.message}</p>
                 </div>
               </div>
               {rec.suggestedItems.length > 0 && rec.status !== 'bueno' && (
-                <div className="mt-3 pt-3 border-t border-gray-100">
-                  <p className="text-xs font-medium text-apple-gray-1 mb-2">Sugerencias:</p>
+                <div className="mt-3 pt-3 border-t border-gray-100 dark:border-white/10">
+                  <p className="text-xs font-medium text-apple-gray-1 dark:text-gray-400 mb-2">Sugerencias:</p>
                   <div className="flex flex-wrap gap-2">
                     {rec.suggestedItems.map((item, j) => (
-                      <span key={j} className="px-3 py-1 bg-apple-blue/8 text-apple-blue text-xs font-medium rounded-full">
+                      <span key={j} className="px-3 py-1 bg-apple-blue/8 dark:bg-apple-blue/20 text-apple-blue text-xs font-medium rounded-full">
                         {item}
                       </span>
                     ))}
@@ -98,13 +98,13 @@ const Tips: React.FC = () => {
       {activeTab === 'nutricion' && (
         <div className="space-y-3">
           <WaterTracker />
-          <h2 className="text-lg font-bold text-gray-900 mt-6 mb-3">Tips de Nutrición</h2>
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white mt-6 mb-3">Tips de Nutrición</h2>
           {nutritionTips.map(tip => (
             <div key={tip.id} className="apple-card p-4 flex gap-3">
               <span className="text-2xl flex-shrink-0">{tip.emoji}</span>
               <div>
-                <h3 className="font-semibold text-gray-900 text-sm">{tip.title}</h3>
-                <p className="text-sm text-apple-gray-1 mt-1">{tip.description}</p>
+                <h3 className="font-semibold text-gray-900 dark:text-white text-sm">{tip.title}</h3>
+                <p className="text-sm text-apple-gray-1 dark:text-gray-400 mt-1">{tip.description}</p>
               </div>
             </div>
           ))}
@@ -123,7 +123,7 @@ const Tips: React.FC = () => {
                 className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium capitalize transition-all ${
                   exerciseFilter === cat
                     ? 'bg-apple-orange text-white'
-                    : 'bg-gray-100 text-gray-600'
+                    : 'bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/20'
                 }`}
               >
                 {cat === 'todos' ? '🏋️ Todos' :
@@ -145,9 +145,9 @@ const Tips: React.FC = () => {
                 >
                   <span className="text-2xl">{exercise.emoji}</span>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900">{exercise.name}</p>
+                    <p className="font-medium text-gray-900 dark:text-white">{exercise.name}</p>
                     <div className="flex items-center gap-3 mt-1">
-                      <span className="text-xs text-apple-gray-1">{exercise.duration} min</span>
+                      <span className="text-xs text-apple-gray-1 dark:text-gray-400">{exercise.duration} min</span>
                       <span className={`apple-badge ${
                         exercise.level === 'principiante' ? 'stock-high' :
                         exercise.level === 'intermedio' ? 'stock-medium' : 'stock-low'
@@ -160,21 +160,21 @@ const Tips: React.FC = () => {
                     </div>
                   </div>
                   {expandedExercise === exercise.id ? (
-                    <ChevronUp className="w-5 h-5 text-apple-gray-2" />
+                    <ChevronUp className="w-5 h-5 text-apple-gray-2 dark:text-gray-400" />
                   ) : (
-                    <ChevronDown className="w-5 h-5 text-apple-gray-2" />
+                    <ChevronDown className="w-5 h-5 text-apple-gray-2 dark:text-gray-400" />
                   )}
                 </button>
                 {expandedExercise === exercise.id && (
-                  <div className="px-4 pb-4 animate-fade-in">
-                    <p className="text-sm text-apple-gray-1 mb-3">{exercise.description}</p>
+                  <div className="px-4 pb-4 animate-fade-in border-t border-gray-100 dark:border-white/5 pt-3">
+                    <p className="text-sm text-apple-gray-1 dark:text-gray-400 mb-3">{exercise.description}</p>
                     <div className="space-y-2">
                       {exercise.steps.map((step, i) => (
                         <div key={i} className="flex gap-3">
-                          <span className="w-6 h-6 bg-apple-orange/10 text-apple-orange rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">
+                          <span className="w-6 h-6 bg-apple-orange/10 dark:bg-apple-orange/20 text-apple-orange rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">
                             {i + 1}
                           </span>
-                          <p className="text-sm text-gray-700">{step}</p>
+                          <p className="text-sm text-gray-700 dark:text-gray-300">{step}</p>
                         </div>
                       ))}
                     </div>
@@ -189,31 +189,31 @@ const Tips: React.FC = () => {
       {/* Wellness Tips */}
       {activeTab === 'bienestar' && (
         <div className="space-y-3">
-          <div className="bg-gradient-to-r from-apple-purple/10 to-apple-pink/10 rounded-apple-lg p-5 mb-4">
-            <h2 className="font-bold text-gray-900 mb-1">💆 Bienestar Integral</h2>
-            <p className="text-sm text-gray-600">
+          <div className="bg-gradient-to-r from-apple-purple/10 to-apple-pink/10 dark:from-apple-purple/20 dark:to-apple-pink/20 rounded-apple-lg p-5 mb-4 border border-apple-purple/10 dark:border-white/5">
+            <h2 className="font-bold text-gray-900 dark:text-white mb-1">💆 Bienestar Integral</h2>
+            <p className="text-sm text-gray-600 dark:text-gray-300">
               La salud no es solo alimentación. Cuida tu cuerpo, mente y espíritu.
             </p>
           </div>
 
-          <h3 className="text-lg font-bold text-gray-900 mb-2">Consejos de Bienestar</h3>
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Consejos de Bienestar</h3>
           {wellnessTips.map(tip => (
             <div key={tip.id} className="apple-card p-4 flex gap-3">
               <span className="text-2xl flex-shrink-0">{tip.emoji}</span>
               <div>
-                <h3 className="font-semibold text-gray-900 text-sm">{tip.title}</h3>
-                <p className="text-sm text-apple-gray-1 mt-1">{tip.description}</p>
+                <h3 className="font-semibold text-gray-900 dark:text-white text-sm">{tip.title}</h3>
+                <p className="text-sm text-apple-gray-1 dark:text-gray-400 mt-1">{tip.description}</p>
               </div>
             </div>
           ))}
 
-          <h3 className="text-lg font-bold text-gray-900 mt-6 mb-2">Hidratación</h3>
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white mt-6 mb-2">Hidratación</h3>
           {hydrationTips.map(tip => (
             <div key={tip.id} className="apple-card p-4 flex gap-3">
               <span className="text-2xl flex-shrink-0">{tip.emoji}</span>
               <div>
-                <h3 className="font-semibold text-gray-900 text-sm">{tip.title}</h3>
-                <p className="text-sm text-apple-gray-1 mt-1">{tip.description}</p>
+                <h3 className="font-semibold text-gray-900 dark:text-white text-sm">{tip.title}</h3>
+                <p className="text-sm text-apple-gray-1 dark:text-gray-400 mt-1">{tip.description}</p>
               </div>
             </div>
           ))}

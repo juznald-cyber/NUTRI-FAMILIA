@@ -153,18 +153,18 @@ const Home: React.FC = () => {
       <div className="grid grid-cols-3 gap-3">
         <div className="apple-card p-4 text-center">
           <Droplets className="w-6 h-6 text-apple-blue mx-auto mb-1" />
-          <p className="text-lg font-bold">{waterLog?.glasses || 0}/8</p>
-          <p className="text-xs text-apple-gray-1">Vasos</p>
+          <p className="text-lg font-bold text-gray-900 dark:text-white">{waterLog?.glasses || 0}/8</p>
+          <p className="text-xs text-apple-gray-1 dark:text-gray-400">Vasos</p>
         </div>
         <div className="apple-card p-4 text-center">
           <ShoppingCart className="w-6 h-6 text-apple-green mx-auto mb-1" />
-          <p className="text-lg font-bold">{pantryCount || 0}</p>
-          <p className="text-xs text-apple-gray-1">Despensa</p>
+          <p className="text-lg font-bold text-gray-900 dark:text-white">{pantryCount || 0}</p>
+          <p className="text-xs text-apple-gray-1 dark:text-gray-400">Despensa</p>
         </div>
         <div className="apple-card p-4 text-center">
           <TrendingUp className="w-6 h-6 text-apple-orange mx-auto mb-1" />
-          <p className="text-lg font-bold">{balanceScore}%</p>
-          <p className="text-xs text-apple-gray-1">Balance</p>
+          <p className="text-lg font-bold text-gray-900 dark:text-white">{balanceScore}%</p>
+          <p className="text-xs text-apple-gray-1 dark:text-gray-400">Balance</p>
         </div>
       </div>
 
@@ -185,24 +185,48 @@ const Home: React.FC = () => {
       <div className="apple-card p-5">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold text-gray-900 dark:text-white">Hidratación</h3>
-          <span className="text-sm text-apple-blue font-medium">
-            {waterLog?.glasses || 0} de 8 vasos
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-apple-blue font-medium">
+              {waterLog?.glasses || 0} de 8 vasos
+            </span>
+            {(waterLog?.glasses || 0) > 0 && (
+              <button
+                type="button"
+                onClick={() => setWaterLog(today, 0)}
+                className="text-xs text-apple-gray-1 dark:text-gray-400 hover:text-apple-red dark:hover:text-apple-red transition-colors px-1.5 py-0.5 rounded bg-gray-100 dark:bg-white/10"
+                title="Reiniciar a 0 vasos"
+              >
+                Limpiar
+              </button>
+            )}
+          </div>
         </div>
         <div className="flex gap-2 justify-between">
-          {Array.from({ length: 8 }, (_, i) => (
-            <button
-              key={i}
-              onClick={() => setWaterLog(today, i + 1)}
-              className={`w-8 h-10 rounded-lg flex items-center justify-center transition-all duration-200 ${
-                i < (waterLog?.glasses || 0)
-                  ? 'bg-apple-blue/15 text-apple-blue dark:bg-apple-blue/25'
-                  : 'bg-gray-100 dark:bg-white/10 text-gray-300 dark:text-gray-600 hover:bg-gray-200 dark:hover:bg-white/20'
-              }`}
-            >
-              <Droplets className="w-4 h-4" />
-            </button>
-          ))}
+          {Array.from({ length: 8 }, (_, i) => {
+            const currentGlasses = waterLog?.glasses || 0;
+            const isFilled = i < currentGlasses;
+            return (
+              <button
+                key={i}
+                type="button"
+                onClick={() => {
+                  if (i + 1 === currentGlasses) {
+                    setWaterLog(today, i);
+                  } else {
+                    setWaterLog(today, i + 1);
+                  }
+                }}
+                className={`flex-1 h-10 rounded-lg flex items-center justify-center transition-all duration-200 active:scale-95 ${
+                  isFilled
+                    ? 'bg-apple-blue/20 text-apple-blue dark:bg-apple-blue/30 ring-1 ring-apple-blue/50 scale-105'
+                    : 'bg-gray-100 dark:bg-white/10 text-gray-300 dark:text-gray-600 hover:bg-gray-200 dark:hover:bg-white/20'
+                }`}
+                title={isFilled ? `Desmarcar hasta vaso ${i}` : `Marcar ${i + 1} vasos`}
+              >
+                <Droplets className="w-4 h-4" />
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>
