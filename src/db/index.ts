@@ -6,6 +6,7 @@ import Dexie, { type Table } from 'dexie';
 
 export interface PantryItem {
   id?: number;
+  syncId?: string;
   name: string;
   category: PantryCategory;
   quantity: number;
@@ -56,6 +57,7 @@ export interface RecipeIngredient {
 
 export interface MealPlanEntry {
   id?: number;
+  syncId?: string;
   date: string; // YYYY-MM-DD
   mealType: 'breakfast' | 'lunch' | 'dinner';
   recipeId?: number;
@@ -69,6 +71,7 @@ export interface MealPlanEntry {
 
 export interface FamilyMember {
   id?: number;
+  syncId?: string;
   name: string;
   emoji: string;
   birthDate?: string;
@@ -83,6 +86,7 @@ export interface FamilyMember {
 
 export interface WaterLog {
   id?: number;
+  syncId?: string;
   date: string;
   glasses: number;
   goal: number;
@@ -107,6 +111,13 @@ export class NutriFamiliaDB extends Dexie {
       mealPlans: '++id, date, mealType, [date+mealType]',
       familyMembers: '++id, name',
       waterLogs: '++id, date',
+    });
+    this.version(2).stores({
+      pantryItems: '++id, syncId, name, category, purchaseDate',
+      recipes: '++id, name, mealType, category',
+      mealPlans: '++id, syncId, date, mealType, [date+mealType]',
+      familyMembers: '++id, syncId, name',
+      waterLogs: '++id, syncId, date',
     });
   }
 }

@@ -8,6 +8,7 @@ import {
   updateProfile
 } from 'firebase/auth';
 import { auth, googleProvider } from '../lib/firebase';
+import { initCloudSync, stopCloudSync } from '../lib/syncService';
 
 export interface AppUser {
   uid: string;
@@ -101,6 +102,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return () => unsubscribe();
   }, []);
+
+  // 3. Initialize Cloud Sync when authenticated user is active
+  useEffect(() => {
+    if (user && user.uid && user.uid !== 'guest_user' && !isGuest) {
+      initCloudSync(user.uid);
+    } else {
+      stopCloudSync();
+    }
+    return () => {
+      stopCloudSync();
+    };
+  }, [user, isGuest]);
 
   const signIn = async (emailOrUser: string, pass: string) => {
     setIsGuest(false);
@@ -222,6 +235,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signOut = async () => {
+    stopCloudSync();
     setIsGuest(false);
     localStorage.removeItem('nutrifamilia_guest');
     localStorage.removeItem(ACTIVE_LOCAL_USER_KEY);
