@@ -2,7 +2,10 @@ import { GoogleGenAI } from '@google/genai';
 import { db, type Recipe, type PantryItem, type FamilyMember, type MealPlanEntry } from '../db';
 import { addRecipe } from '../hooks/useDatabase';
 
-const GEMINI_STORAGE_KEY = 'nutrifamilia_gemini_api_key';
+import { doc, setDoc } from 'firebase/firestore';
+import { auth, dbFirestore } from '../lib/firebase';
+
+export const GEMINI_STORAGE_KEY = 'nutrifamilia_gemini_api_key';
 
 export function getGeminiApiKey(): string {
   const customKey = localStorage.getItem(GEMINI_STORAGE_KEY);
@@ -13,10 +16,24 @@ export function getGeminiApiKey(): string {
 }
 
 export function setGeminiApiKey(key: string) {
-  if (key && key.trim()) {
-    localStorage.setItem(GEMINI_STORAGE_KEY, key.trim());
+  const trimmed = key ? key.trim() : '';
+  if (trimmed) {
+    localStorage.setItem(GEMINI_STORAGE_KEY, trimmed);
   } else {
     localStorage.removeItem(GEMINI_STORAGE_KEY);
+  }
+
+  // Push to user cloud profile in Firestore
+  const user = auth.currentUser;
+  if (user && user.uid && user.uid !== 'guest_user') {
+    try {
+      const settingsRef = doc(dbFirestore, `users/${user.uid}/settings/config`);
+      setDoc(settingsRef, { geminiApiKey: trimmed }, { merge: true }).catch(err => {
+        console.error('Failed to sync API key to cloud:', err);
+      });
+    } catch (e) {
+      console.error(e);
+    }
   }
 }
 

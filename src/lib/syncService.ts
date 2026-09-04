@@ -218,6 +218,25 @@ export function initCloudSync(userId: string) {
     }
   });
   unsubscribeListeners.push(unsubWater);
+
+  // 5. Sync User Settings & Gemini API Key
+  const settingsDocRef = doc(dbFirestore, `users/${userId}/settings/config`);
+  const unsubSettings = onSnapshot(settingsDocRef, async (docSnap) => {
+    try {
+      const localKey = localStorage.getItem('nutrifamilia_gemini_api_key');
+      if (docSnap.exists()) {
+        const cloudData = docSnap.data();
+        if (cloudData.geminiApiKey) {
+          localStorage.setItem('nutrifamilia_gemini_api_key', cloudData.geminiApiKey);
+        }
+      } else if (localKey && localKey.trim()) {
+        await setDoc(settingsDocRef, { geminiApiKey: localKey.trim() }, { merge: true });
+      }
+    } catch (err) {
+      console.error('Error syncing settings:', err);
+    }
+  });
+  unsubscribeListeners.push(unsubSettings);
 }
 
 export function stopCloudSync() {
