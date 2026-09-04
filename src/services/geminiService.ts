@@ -22,6 +22,7 @@ export function setGeminiApiKey(key: string) {
   } else {
     localStorage.removeItem(GEMINI_STORAGE_KEY);
   }
+  window.dispatchEvent(new CustomEvent('gemini-key-updated', { detail: trimmed }));
 
   // Push to user cloud profile in Firestore
   const user = auth.currentUser;

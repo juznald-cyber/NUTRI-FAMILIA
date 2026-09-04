@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sparkles, Key, ExternalLink, X, Check, ShieldCheck } from 'lucide-react';
 import { getGeminiApiKey, setGeminiApiKey, hasGeminiApiKey } from '../../services/geminiService';
 
@@ -11,6 +11,12 @@ interface GeminiConfigModalProps {
 export default function GeminiConfigModal({ isOpen, onClose, onSaved }: GeminiConfigModalProps) {
   const [apiKey, setApiKey] = useState(() => getGeminiApiKey());
   const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setApiKey(getGeminiApiKey());
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 

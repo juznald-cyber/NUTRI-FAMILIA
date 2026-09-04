@@ -228,6 +228,10 @@ export function initCloudSync(userId: string) {
         const cloudData = docSnap.data();
         if (cloudData.geminiApiKey) {
           localStorage.setItem('nutrifamilia_gemini_api_key', cloudData.geminiApiKey);
+          window.dispatchEvent(new CustomEvent('gemini-key-updated', { detail: cloudData.geminiApiKey }));
+        } else if (localKey && localKey.trim()) {
+          // Cloud doc exists without key, upload local key
+          await setDoc(settingsDocRef, { geminiApiKey: localKey.trim() }, { merge: true });
         }
       } else if (localKey && localKey.trim()) {
         await setDoc(settingsDocRef, { geminiApiKey: localKey.trim() }, { merge: true });

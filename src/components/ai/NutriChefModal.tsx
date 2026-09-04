@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChefHat, Send, Sparkles, X, Bot, User, RefreshCw, Key } from 'lucide-react';
 import { usePantryItems, useFamilyMembers } from '../../hooks/useDatabase';
 import { askNutriChef, hasGeminiApiKey } from '../../services/geminiService';
@@ -33,6 +33,14 @@ export default function NutriChefModal({ isOpen, onClose, onOpenConfig }: NutriC
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [apiKeyReady, setApiKeyReady] = useState(() => hasGeminiApiKey());
+
+  useEffect(() => {
+    setApiKeyReady(hasGeminiApiKey());
+    const handleKeyUpdated = () => setApiKeyReady(hasGeminiApiKey());
+    window.addEventListener('gemini-key-updated', handleKeyUpdated);
+    return () => window.removeEventListener('gemini-key-updated', handleKeyUpdated);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -118,7 +126,7 @@ export default function NutriChefModal({ isOpen, onClose, onOpenConfig }: NutriC
 
         {/* Messages Body */}
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
-          {!hasGeminiApiKey() && (
+          {!apiKeyReady && (
             <div className="p-3 bg-apple-orange/10 border border-apple-orange/20 rounded-apple-sm text-xs flex items-center justify-between">
               <div className="text-gray-800 dark:text-gray-200">
                 <p className="font-semibold text-apple-orange">Clave de IA requerida</p>
