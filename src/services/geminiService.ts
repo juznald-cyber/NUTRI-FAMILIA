@@ -11,13 +11,14 @@ export const GEMINI_STORAGE_KEY = 'nutrifamilia_gemini_api_key';
 export function getGeminiApiKey(): string {
   const customKey = localStorage.getItem(GEMINI_STORAGE_KEY);
   if (customKey && customKey.trim()) {
-    return customKey.trim();
+    return customKey.replace(/["'\s]/g, '').trim();
   }
-  return (import.meta as any).env?.VITE_GEMINI_API_KEY || '';
+  const envKey = (import.meta as any).env?.VITE_GEMINI_API_KEY || '';
+  return envKey ? envKey.replace(/["'\s]/g, '').trim() : '';
 }
 
 export function setGeminiApiKey(key: string) {
-  const trimmed = key ? key.trim() : '';
+  const trimmed = key ? key.replace(/["'\s]/g, '').trim() : '';
   if (trimmed) {
     localStorage.setItem(GEMINI_STORAGE_KEY, trimmed);
   } else {
@@ -41,7 +42,7 @@ export function setGeminiApiKey(key: string) {
 
 export function hasGeminiApiKey(): boolean {
   const key = getGeminiApiKey();
-  return Boolean(key && key.length > 10);
+  return Boolean(key && key.length >= 20);
 }
 
 function getAIClient(): GoogleGenAI {
@@ -50,6 +51,41 @@ function getAIClient(): GoogleGenAI {
     throw new Error('No se ha configurado una clave de API de Gemini. Por favor ingresa tu API Key en la configuración.');
   }
   return new GoogleGenAI({ apiKey });
+}
+
+const FALLBACK_MODELS = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.0-flash'];
+
+async function generateWithFallback(options: {
+  contents: string;
+  responseMimeType?: string;
+  temperature?: number;
+}) {
+  const ai = getAIClient();
+  let lastErr: any = null;
+
+  for (const model of FALLBACK_MODELS) {
+    try {
+      const config: any = {};
+      if (options.responseMimeType) config.responseMimeType = options.responseMimeType;
+      if (typeof options.temperature === 'number') config.temperature = options.temperature;
+
+      const response = await ai.models.generateContent({
+        model,
+        contents: options.contents,
+        ...(Object.keys(config).length > 0 ? { config } : {}),
+      });
+      return response;
+    } catch (err: any) {
+      console.warn(`Model ${model} failed, trying fallback:`, err);
+      lastErr = err;
+      // If authentication error, stop attempting fallbacks
+      if (err?.status === 400 || err?.status === 401 || err?.status === 403 || err?.message?.includes('API_KEY_INVALID')) {
+        throw err;
+      }
+    }
+  }
+
+  throw lastErr || new Error('No se pudo conectar con el servicio de IA de Gemini.');
 }
 
 export interface AIGeneratedPlanResponse {
@@ -73,8 +109,6 @@ export async function generateAIMealPlan({
   pantryItems: PantryItem[];
   familyMembers: FamilyMember[];
 }): Promise<AIGeneratedPlanResponse> {
-  const ai = getAIClient();
-
   const pantryList = pantryItems.length > 0
     ? pantryItems.map(p => `${p.name} (${p.quantity} ${p.unit})`).join(', ')
     : 'Despensa estándar balanceada (pollo, vegetales variados, arroz, frutas, huevos, legumbres, avena)';
@@ -136,13 +170,10 @@ REGLAS ESTRICTAS:
   ]
 }`;
 
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash',
+  const response = await generateWithFallback({
     contents: prompt,
-    config: {
-      responseMimeType: 'application/json',
-      temperature: 0.7,
-    },
+    responseMimeType: 'application/json',
+    temperature: 0.7,
   });
 
   const text = response.text || '{}';
@@ -154,8 +185,6 @@ REGLAS ESTRICTAS:
  * Generates fresh nutrition, wellness, and hydration tips with Gemini AI
  */
 export async function generateAITips(familyMembers: FamilyMember[]) {
-  const ai = getAIClient();
-
   const restrictions = Array.from(new Set(familyMembers.flatMap(m => m.restrictions || []))).join(', ');
   const prompt = `Como nutricionista de NutriFamilia, genera 6 consejos prácticos, modernos y motivadores para hoy.
 Perfil familiar: ${familyMembers.length} integrantes. Restricciones: ${restrictions || 'Ninguna'}.
@@ -172,13 +201,10 @@ Devuelve un JSON con el formato:
   ]
 }`;
 
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash',
+  const response = await generateWithFallback({
     contents: prompt,
-    config: {
-      responseMimeType: 'application/json',
-      temperature: 0.8,
-    },
+    responseMimeType: 'application/json',
+    temperature: 0.8,
   });
 
   return JSON.parse(response.text || '{}');
@@ -188,8 +214,6 @@ Devuelve un JSON con el formato:
  * Generates fresh customized exercises with Gemini AI
  */
 export async function generateAIExercises(familyMembers: FamilyMember[]) {
-  const ai = getAIClient();
-
   const prompt = `Como entrenador personal y especialista en actividad física familiar, genera 6 ejercicios variados (cardio, fuerza, flexibilidad, hiit) para hacer en casa o parque.
 Devuelve un JSON con el formato:
 {
@@ -208,13 +232,10 @@ Devuelve un JSON con el formato:
   ]
 }`;
 
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash',
+  const response = await generateWithFallback({
     contents: prompt,
-    config: {
-      responseMimeType: 'application/json',
-      temperature: 0.7,
-    },
+    responseMimeType: 'application/json',
+    temperature: 0.7,
   });
 
   return JSON.parse(response.text || '{}');
@@ -232,8 +253,6 @@ export async function askNutriChef({
   pantryItems: PantryItem[];
   familyMembers: FamilyMember[];
 }): Promise<string> {
-  const ai = getAIClient();
-
   const pantrySummary = pantryItems.slice(0, 15).map(p => `${p.name} (${p.quantity} ${p.unit})`).join(', ');
   const familySummary = familyMembers.map(m => `${m.name} (${m.age} años, meta: ${m.calorieGoal} kcal${m.restrictions.length > 0 ? `, restricciones: ${m.restrictions.join(', ')}` : ''})`).join('; ');
 
@@ -244,11 +263,11 @@ Tu rol es ayudar a las familias a comer sano, dar ideas rápidas de recetas con 
 
 Sé conciso, estructurado con emojis y listas claras, y muy motivador. Responde en español.`;
 
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash',
-    contents: [
-      { role: 'user', parts: [{ text: `${systemPrompt}\n\nPregunta del usuario: ${question}` }] }
-    ],
+  const fullPrompt = `${systemPrompt}\n\nPregunta del usuario: ${question}`;
+
+  const response = await generateWithFallback({
+    contents: fullPrompt,
+    temperature: 0.7,
   });
 
   return response.text || 'No pude procesar la respuesta en este momento. Por favor intenta de nuevo.';

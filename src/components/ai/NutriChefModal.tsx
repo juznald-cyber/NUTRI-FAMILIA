@@ -67,12 +67,21 @@ export default function NutriChefModal({ isOpen, onClose, onOpenConfig }: NutriC
 
       setMessages(prev => [...prev, { role: 'assistant', content: reply }]);
     } catch (err: any) {
-      console.error(err);
+      console.error('NutriChef error details:', err);
+      let errorMsg = '⚠️ Ocurrió un error al contactar a la IA.';
+      const msg = (err?.message || '').toLowerCase();
+      if (msg.includes('api_key_invalid') || msg.includes('api key not valid') || msg.includes('400') || msg.includes('403')) {
+        errorMsg = '⚠️ La clave de API de Gemini parece no ser válida o estar mal copiada. Por favor toca el ícono de la llave 🔑 arriba y vuelve a pegarla desde Google AI Studio.';
+      } else if (msg.includes('quota') || msg.includes('429') || msg.includes('rate limit')) {
+        errorMsg = '⚠️ Límite de consultas gratuitas de Google alcanzado temporalmente. Espera 1 minuto y vuelve a preguntar.';
+      } else if (err?.message) {
+        errorMsg = `⚠️ Error al consultar a Gemini (${err.message.substring(0, 120)}). Verifica tu conexión o clave en configuración.`;
+      }
       setMessages(prev => [
         ...prev, 
         { 
           role: 'assistant', 
-          content: '⚠️ Ocurrió un error al contactar a la IA. Verifica tu clave de Gemini en la configuración.' 
+          content: errorMsg 
         }
       ]);
     } finally {
