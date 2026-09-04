@@ -53,35 +53,67 @@ function getAIClient(): GoogleGenAI {
   return new GoogleGenAI({ apiKey });
 }
 
-const FALLBACK_MODELS = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.0-flash'];
+const VALID_MODELS = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.5-flash-lite'];
 
 async function generateWithFallback(options: {
   contents: string;
   responseMimeType?: string;
   temperature?: number;
-}) {
-  const ai = getAIClient();
+}): Promise<string> {
+  const apiKey = getGeminiApiKey();
+  if (!apiKey) {
+    throw new Error('No se ha configurado una clave de API de Gemini. Por favor ingresa tu API Key en la configuración.');
+  }
+
   let lastErr: any = null;
 
-  for (const model of FALLBACK_MODELS) {
+  for (const model of VALID_MODELS) {
     try {
-      const config: any = {};
-      if (options.responseMimeType) config.responseMimeType = options.responseMimeType;
-      if (typeof options.temperature === 'number') config.temperature = options.temperature;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      const payload: any = {
+        contents: [
+          {
+            parts: [{ text: options.contents }]
+          }
+        ],
+        generationConfig: {
+          temperature: options.temperature ?? 0.7,
+        }
+      };
+      if (options.responseMimeType) {
+        payload.generationConfig.responseMimeType = options.responseMimeType;
+      }
 
-      const response = await ai.models.generateContent({
-        model,
-        contents: options.contents,
-        ...(Object.keys(config).length > 0 ? { config } : {}),
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       });
-      return response;
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        const errorMsg = data?.error?.message || `HTTP ${res.status}`;
+        console.warn(`Gemini model ${model} error:`, errorMsg);
+        
+        if (res.status === 400 && (errorMsg.includes('API_KEY_INVALID') || errorMsg.includes('API key not valid') || errorMsg.includes('API_KEY_SERVICE_BLOCKED'))) {
+          throw new Error('Tu clave de API de Gemini no es válida. Por favor crea una nueva clave en Google AI Studio y pégala en Configuración.');
+        }
+
+        lastErr = new Error(errorMsg);
+        continue;
+      }
+
+      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (text) {
+        return text;
+      }
     } catch (err: any) {
-      console.warn(`Model ${model} failed, trying fallback:`, err);
-      lastErr = err;
-      // If authentication error, stop attempting fallbacks
-      if (err?.status === 400 || err?.status === 401 || err?.status === 403 || err?.message?.includes('API_KEY_INVALID')) {
+      if (err.message?.includes('clave de API de Gemini no es válida')) {
         throw err;
       }
+      lastErr = err;
+      console.warn(`Model ${model} failed, trying next fallback:`, err);
     }
   }
 
@@ -170,14 +202,13 @@ REGLAS ESTRICTAS:
   ]
 }`;
 
-  const response = await generateWithFallback({
+  const text = await generateWithFallback({
     contents: prompt,
     responseMimeType: 'application/json',
     temperature: 0.7,
   });
 
-  const text = response.text || '{}';
-  const parsed: AIGeneratedPlanResponse = JSON.parse(text);
+  const parsed: AIGeneratedPlanResponse = JSON.parse(text || '{}');
   return parsed;
 }
 
@@ -201,13 +232,13 @@ Devuelve un JSON con el formato:
   ]
 }`;
 
-  const response = await generateWithFallback({
+  const text = await generateWithFallback({
     contents: prompt,
     responseMimeType: 'application/json',
     temperature: 0.8,
   });
 
-  return JSON.parse(response.text || '{}');
+  return JSON.parse(text || '{}');
 }
 
 /**
@@ -232,13 +263,13 @@ Devuelve un JSON con el formato:
   ]
 }`;
 
-  const response = await generateWithFallback({
+  const text = await generateWithFallback({
     contents: prompt,
     responseMimeType: 'application/json',
     temperature: 0.7,
   });
 
-  return JSON.parse(response.text || '{}');
+  return JSON.parse(text || '{}');
 }
 
 /**
@@ -265,10 +296,10 @@ Sé conciso, estructurado con emojis y listas claras, y muy motivador. Responde 
 
   const fullPrompt = `${systemPrompt}\n\nPregunta del usuario: ${question}`;
 
-  const response = await generateWithFallback({
+  const reply = await generateWithFallback({
     contents: fullPrompt,
     temperature: 0.7,
   });
 
-  return response.text || 'No pude procesar la respuesta en este momento. Por favor intenta de nuevo.';
+  return reply || 'No pude procesar la respuesta en este momento. Por favor intenta de nuevo.';
 }
