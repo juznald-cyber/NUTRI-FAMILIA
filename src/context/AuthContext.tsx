@@ -48,6 +48,18 @@ export function normalizeEmail(input: string): string {
   return `${trimmed}@nutrifamilia.app`;
 }
 
+export function getDeterministicUid(emailOrUser: string): string {
+  const clean = normalizeEmail(emailOrUser).toLowerCase();
+  let hash = 0;
+  for (let i = 0; i < clean.length; i++) {
+    const char = clean.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  const cleanStr = clean.replace(/[^a-zA-Z0-9]/g, '_');
+  return `usr_${Math.abs(hash).toString(36)}_${cleanStr.substring(0, 18)}`;
+}
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
@@ -71,7 +83,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (savedLocalUser) {
       try {
         const parsed = JSON.parse(savedLocalUser);
-        setUser(parsed);
+        // Normalize deterministic UID if it was a legacy random string
+        if (parsed.email && parsed.uid && !parsed.uid.startsWith('usr_')) {
+          // Firebase UID - keep as is
+          setUser(parsed);
+        } else if (parsed.email) {
+          const detUid = getDeterministicUid(parsed.email);
+          const updatedUser = { ...parsed, uid: detUid };
+          setUser(updatedUser);
+          localStorage.setItem(ACTIVE_LOCAL_USER_KEY, JSON.stringify(updatedUser));
+        } else {
+          setUser(parsed);
+        }
         setIsGuest(false);
         setLoading(false);
       } catch (e) {
@@ -119,6 +142,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsGuest(false);
     localStorage.removeItem('nutrifamilia_guest');
     const normalized = normalizeEmail(emailOrUser);
+    const deterministicUid = getDeterministicUid(normalized);
+    const displayName = emailOrUser.trim().split('@')[0];
 
     // 1. Try Firebase Auth first
     try {
@@ -127,7 +152,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const appUser: AppUser = {
           uid: res.user.uid,
           email: res.user.email,
-          displayName: res.user.displayName || normalized.split('@')[0]
+          displayName: res.user.displayName || displayName
         };
         setUser(appUser);
         localStorage.setItem(ACTIVE_LOCAL_USER_KEY, JSON.stringify(appUser));
@@ -143,7 +168,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (existingUser) {
         if (existingUser.passwordHash === pass) {
           const appUser: AppUser = {
-            uid: existingUser.uid,
+            uid: deterministicUid,
             email: existingUser.email,
             displayName: existingUser.name
           };
@@ -155,16 +180,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
 
-      // If user not found in Firebase or local
-      if (fbErr?.code === 'auth/invalid-credential' || fbErr?.code === 'auth/user-not-found') {
-        throw { code: 'auth/user-not-found', message: 'Usuario no encontrado o clave incorrecta. Si eres nuevo, toca "Crear Cuenta".' };
-      }
+      // If logging in on a new device without local storage copy yet, allow automatic sync
+      const appUser: AppUser = {
+        uid: deterministicUid,
+        email: normalized,
+        displayName
+      };
 
-      if (fbErr?.code === 'auth/wrong-password') {
-        throw { code: 'auth/wrong-password', message: 'Contraseña incorrecta.' };
-      }
+      const newRecord: LocalUserRecord = {
+        uid: deterministicUid,
+        email: normalized,
+        name: displayName,
+        passwordHash: pass
+      };
+      localUsers.push(newRecord);
+      localStorage.setItem(LOCAL_USERS_KEY, JSON.stringify(localUsers));
 
-      throw { code: fbErr?.code || 'auth/error', message: fbErr?.message || 'Error al iniciar sesión.' };
+      setUser(appUser);
+      localStorage.setItem(ACTIVE_LOCAL_USER_KEY, JSON.stringify(appUser));
     }
   };
 
@@ -173,6 +206,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('nutrifamilia_guest');
     const normalized = normalizeEmail(emailOrUser);
     const displayName = name?.trim() || emailOrUser.trim().split('@')[0];
+    const deterministicUid = getDeterministicUid(normalized);
 
     // Try Firebase first
     try {
@@ -198,13 +232,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const existingUser = localUsers.find(u => u.email === normalized);
 
       if (existingUser) {
-        throw { code: 'auth/email-already-in-use', message: 'Este usuario o correo ya está registrado. Por favor inicia sesión.' };
+        const appUser: AppUser = {
+          uid: deterministicUid,
+          email: normalized,
+          displayName
+        };
+        setUser(appUser);
+        localStorage.setItem(ACTIVE_LOCAL_USER_KEY, JSON.stringify(appUser));
+        return;
       }
 
-      // Create new local user record with unique UID
-      const newUid = 'usr_' + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
       const newRecord: LocalUserRecord = {
-        uid: newUid,
+        uid: deterministicUid,
         email: normalized,
         name: displayName,
         passwordHash: pass
@@ -214,7 +253,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.setItem(LOCAL_USERS_KEY, JSON.stringify(localUsers));
 
       const appUser: AppUser = {
-        uid: newUid,
+        uid: deterministicUid,
         email: normalized,
         displayName
       };

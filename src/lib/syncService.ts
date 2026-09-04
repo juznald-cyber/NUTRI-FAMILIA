@@ -221,14 +221,26 @@ export function initCloudSync(userId: string) {
 
   // 5. Sync User Settings & Gemini API Key
   const settingsDocRef = doc(dbFirestore, `users/${userId}/settings/config`);
+  
+  // Proactively upload local API key immediately if available
+  const initialLocalKey = localStorage.getItem('nutrifamilia_gemini_api_key');
+  if (initialLocalKey && initialLocalKey.trim()) {
+    setDoc(settingsDocRef, { geminiApiKey: initialLocalKey.trim() }, { merge: true }).catch(err => {
+      console.log('Initial settings upload info:', err);
+    });
+  }
+
   const unsubSettings = onSnapshot(settingsDocRef, async (docSnap) => {
     try {
       const localKey = localStorage.getItem('nutrifamilia_gemini_api_key');
       if (docSnap.exists()) {
         const cloudData = docSnap.data();
-        if (cloudData.geminiApiKey) {
-          localStorage.setItem('nutrifamilia_gemini_api_key', cloudData.geminiApiKey);
-          window.dispatchEvent(new CustomEvent('gemini-key-updated', { detail: cloudData.geminiApiKey }));
+        if (cloudData.geminiApiKey && typeof cloudData.geminiApiKey === 'string' && cloudData.geminiApiKey.trim()) {
+          const trimmedCloudKey = cloudData.geminiApiKey.trim();
+          if (trimmedCloudKey !== localKey) {
+            localStorage.setItem('nutrifamilia_gemini_api_key', trimmedCloudKey);
+            window.dispatchEvent(new CustomEvent('gemini-key-updated', { detail: trimmedCloudKey }));
+          }
         } else if (localKey && localKey.trim()) {
           // Cloud doc exists without key, upload local key
           await setDoc(settingsDocRef, { geminiApiKey: localKey.trim() }, { merge: true });
@@ -248,18 +260,36 @@ export function stopCloudSync() {
   unsubscribeListeners = [];
 }
 
+export function getActiveUserId(): string | null {
+  if (auth.currentUser && auth.currentUser.uid) {
+    return auth.currentUser.uid;
+  }
+  try {
+    const saved = localStorage.getItem('nutrifamilia_active_user');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed && parsed.uid && parsed.uid !== 'guest_user') {
+        return parsed.uid;
+      }
+    }
+  } catch (e) {
+    console.error('Failed to get active user ID:', e);
+  }
+  return null;
+}
+
 // --------------------------------------------
 // Cloud Push Operations
 // --------------------------------------------
 
 export async function pushFamilyMemberToCloud(item: FamilyMember) {
   if (isApplyingCloudUpdate) return;
-  const user = auth.currentUser;
-  if (!user) return;
+  const userId = getActiveUserId();
+  if (!userId) return;
   try {
     const syncId = item.syncId || generateSyncId('fam');
     const { id, ...cleanData } = item;
-    await setDoc(doc(dbFirestore, `users/${user.uid}/familyMembers`, syncId), { ...cleanData, syncId });
+    await setDoc(doc(dbFirestore, `users/${userId}/familyMembers`, syncId), { ...cleanData, syncId });
   } catch (e) {
     console.error('Failed to push family member to cloud:', e);
   }
@@ -267,10 +297,10 @@ export async function pushFamilyMemberToCloud(item: FamilyMember) {
 
 export async function removeFamilyMemberFromCloud(syncId?: string) {
   if (isApplyingCloudUpdate || !syncId) return;
-  const user = auth.currentUser;
-  if (!user) return;
+  const userId = getActiveUserId();
+  if (!userId) return;
   try {
-    await deleteDoc(doc(dbFirestore, `users/${user.uid}/familyMembers`, syncId));
+    await deleteDoc(doc(dbFirestore, `users/${userId}/familyMembers`, syncId));
   } catch (e) {
     console.error('Failed to delete family member from cloud:', e);
   }
@@ -278,12 +308,12 @@ export async function removeFamilyMemberFromCloud(syncId?: string) {
 
 export async function pushPantryItemToCloud(item: PantryItem) {
   if (isApplyingCloudUpdate) return;
-  const user = auth.currentUser;
-  if (!user) return;
+  const userId = getActiveUserId();
+  if (!userId) return;
   try {
     const syncId = item.syncId || generateSyncId('pnt');
     const { id, ...cleanData } = item;
-    await setDoc(doc(dbFirestore, `users/${user.uid}/pantryItems`, syncId), { ...cleanData, syncId });
+    await setDoc(doc(dbFirestore, `users/${userId}/pantryItems`, syncId), { ...cleanData, syncId });
   } catch (e) {
     console.error('Failed to push pantry item to cloud:', e);
   }
@@ -291,10 +321,10 @@ export async function pushPantryItemToCloud(item: PantryItem) {
 
 export async function removePantryItemFromCloud(syncId?: string) {
   if (isApplyingCloudUpdate || !syncId) return;
-  const user = auth.currentUser;
-  if (!user) return;
+  const userId = getActiveUserId();
+  if (!userId) return;
   try {
-    await deleteDoc(doc(dbFirestore, `users/${user.uid}/pantryItems`, syncId));
+    await deleteDoc(doc(dbFirestore, `users/${userId}/pantryItems`, syncId));
   } catch (e) {
     console.error('Failed to delete pantry item from cloud:', e);
   }
@@ -302,12 +332,12 @@ export async function removePantryItemFromCloud(syncId?: string) {
 
 export async function pushMealPlanToCloud(item: MealPlanEntry) {
   if (isApplyingCloudUpdate) return;
-  const user = auth.currentUser;
-  if (!user) return;
+  const userId = getActiveUserId();
+  if (!userId) return;
   try {
     const syncId = item.syncId || `${item.date}_${item.mealType}`;
     const { id, ...cleanData } = item;
-    await setDoc(doc(dbFirestore, `users/${user.uid}/mealPlans`, syncId), { ...cleanData, syncId });
+    await setDoc(doc(dbFirestore, `users/${userId}/mealPlans`, syncId), { ...cleanData, syncId });
   } catch (e) {
     console.error('Failed to push meal plan to cloud:', e);
   }
@@ -315,10 +345,10 @@ export async function pushMealPlanToCloud(item: MealPlanEntry) {
 
 export async function removeMealPlanFromCloud(syncId?: string) {
   if (isApplyingCloudUpdate || !syncId) return;
-  const user = auth.currentUser;
-  if (!user) return;
+  const userId = getActiveUserId();
+  if (!userId) return;
   try {
-    await deleteDoc(doc(dbFirestore, `users/${user.uid}/mealPlans`, syncId));
+    await deleteDoc(doc(dbFirestore, `users/${userId}/mealPlans`, syncId));
   } catch (e) {
     console.error('Failed to delete meal plan from cloud:', e);
   }
@@ -326,11 +356,11 @@ export async function removeMealPlanFromCloud(syncId?: string) {
 
 export async function pushWaterLogToCloud(item: WaterLog) {
   if (isApplyingCloudUpdate) return;
-  const user = auth.currentUser;
-  if (!user) return;
+  const userId = getActiveUserId();
+  if (!userId) return;
   try {
     const { id, ...cleanData } = item;
-    await setDoc(doc(dbFirestore, `users/${user.uid}/waterLogs`, item.date), cleanData);
+    await setDoc(doc(dbFirestore, `users/${userId}/waterLogs`, item.date), cleanData);
   } catch (e) {
     console.error('Failed to push water log to cloud:', e);
   }

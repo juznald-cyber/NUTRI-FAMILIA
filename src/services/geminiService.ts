@@ -4,6 +4,7 @@ import { addRecipe } from '../hooks/useDatabase';
 
 import { doc, setDoc } from 'firebase/firestore';
 import { auth, dbFirestore } from '../lib/firebase';
+import { getActiveUserId } from '../lib/syncService';
 
 export const GEMINI_STORAGE_KEY = 'nutrifamilia_gemini_api_key';
 
@@ -25,10 +26,10 @@ export function setGeminiApiKey(key: string) {
   window.dispatchEvent(new CustomEvent('gemini-key-updated', { detail: trimmed }));
 
   // Push to user cloud profile in Firestore
-  const user = auth.currentUser;
-  if (user && user.uid && user.uid !== 'guest_user') {
+  const userId = getActiveUserId();
+  if (userId && userId !== 'guest_user') {
     try {
-      const settingsRef = doc(dbFirestore, `users/${user.uid}/settings/config`);
+      const settingsRef = doc(dbFirestore, `users/${userId}/settings/config`);
       setDoc(settingsRef, { geminiApiKey: trimmed }, { merge: true }).catch(err => {
         console.error('Failed to sync API key to cloud:', err);
       });
