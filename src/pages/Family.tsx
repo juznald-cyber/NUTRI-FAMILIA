@@ -470,6 +470,34 @@ const Family: React.FC = () => {
         </div>
       </div>
 
+      {/* Gemini AI Configuration Card */}
+      <div className="mt-4 apple-card p-5 bg-gradient-to-r from-apple-blue/10 via-purple-500/10 to-apple-pink/10 dark:from-apple-blue/20 dark:via-purple-500/20 dark:to-apple-pink/20 border border-apple-blue/20">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-apple bg-gradient-to-tr from-apple-blue to-purple-600 text-white flex items-center justify-center shadow-apple">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="font-bold text-gray-900 dark:text-white text-sm">
+                Google Gemini AI
+              </p>
+              <p className="text-xs text-apple-gray-1 dark:text-gray-300 mt-0.5">
+                Genera menús, tips y rutinas inteligentes
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              const evt = new CustomEvent('open-gemini-config');
+              window.dispatchEvent(evt);
+            }}
+            className="px-3.5 py-2 bg-gradient-to-r from-apple-blue to-purple-600 text-white text-xs font-bold rounded-full shadow-apple active:scale-95 transition-all"
+          >
+            Configurar
+          </button>
+        </div>
+      </div>
+
       {/* Account Profile Card */}
       <div className="mt-4 apple-card p-5">
         <div className="flex items-center justify-between">

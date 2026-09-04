@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingCart, Apple, Dumbbell, Heart, Droplets, ChevronDown, ChevronUp } from 'lucide-react';
+import { ShoppingCart, Apple, Dumbbell, Heart, Droplets, ChevronDown, ChevronUp, Sparkles, RefreshCw, AlertCircle, ChefHat } from 'lucide-react';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { db } from '../db';
 import { getShoppingRecommendations, type ShoppingRecommendation } from '../utils/recommendations';
-import { nutritionTips, wellnessTips, hydrationTips } from '../data/tips';
-import { exercises as exerciseData } from '../data/exercises';
+import { nutritionTips as defaultNutritionTips, wellnessTips as defaultWellnessTips, hydrationTips as defaultHydrationTips } from '../data/tips';
+import { exercises as defaultExercises } from '../data/exercises';
+import { generateAITips, generateAIExercises, hasGeminiApiKey } from '../services/geminiService';
 import WaterTracker from '../components/tips/WaterTracker';
 
 const TABS = [
@@ -18,18 +21,106 @@ const Tips: React.FC = () => {
   const [expandedExercise, setExpandedExercise] = useState<number | null>(null);
   const [exerciseFilter, setExerciseFilter] = useState<string>('todos');
 
+  const [nutritionTipsList, setNutritionTipsList] = useState(defaultNutritionTips);
+  const [wellnessTipsList, setWellnessTipsList] = useState(defaultWellnessTips);
+  const [hydrationTipsList, setHydrationTipsList] = useState(defaultHydrationTips);
+  const [exercisesList, setExercisesList] = useState(defaultExercises);
+
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+  const [aiSuccessMessage, setAiSuccessMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const familyMembers = useLiveQuery(() => db.familyMembers.toArray()) || [];
+
   useEffect(() => {
     getShoppingRecommendations().then(setRecommendations);
   }, []);
 
+  const handleRefreshWithAI = async () => {
+    if (!hasGeminiApiKey()) {
+      window.dispatchEvent(new CustomEvent('open-gemini-config'));
+      return;
+    }
+
+    setIsGeneratingAI(true);
+    setError(null);
+    setAiSuccessMessage(null);
+
+    try {
+      if (activeTab === 'ejercicio') {
+        const result = await generateAIExercises(familyMembers);
+        if (result.exercises && result.exercises.length > 0) {
+          setExercisesList(result.exercises);
+          setAiSuccessMessage('✨ ¡Nuevas rutinas de ejercicio generadas con IA!');
+        }
+      } else {
+        const result = await generateAITips(familyMembers);
+        if (result.nutritionTips) setNutritionTipsList(result.nutritionTips);
+        if (result.wellnessTips) setWellnessTipsList(result.wellnessTips);
+        if (result.hydrationTips) setHydrationTipsList(result.hydrationTips);
+        setAiSuccessMessage('✨ ¡Consejos frescos de salud y nutrición generados con IA!');
+      }
+      setTimeout(() => setAiSuccessMessage(null), 4000);
+    } catch (err: any) {
+      console.error('AI Tips Error:', err);
+      setError('No se pudieron generar los tips con IA. Verifica tu clave de Gemini.');
+    } finally {
+      setIsGeneratingAI(false);
+    }
+  };
+
   const filteredExercises = exerciseFilter === 'todos'
-    ? exerciseData
-    : exerciseData.filter(e => e.category === exerciseFilter);
+    ? exercisesList
+    : exercisesList.filter(e => e.category === exerciseFilter);
 
   return (
     <div className="px-5 pt-2 pb-4 animate-fade-in">
       {/* Header */}
-      <h1 className="apple-large-title mb-4">Tips y Consejos</h1>
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h1 className="apple-large-title">Tips y Consejos</h1>
+          <p className="text-xs text-apple-gray-1 dark:text-gray-400">
+            Salud, nutrición y actividad física para tu familia
+          </p>
+        </div>
+
+        {/* AI Refresh Button */}
+        {activeTab !== 'compras' && (
+          <button
+            onClick={handleRefreshWithAI}
+            disabled={isGeneratingAI}
+            className="px-3 py-1.5 bg-gradient-to-r from-apple-orange to-apple-pink text-white rounded-apple-sm text-xs font-bold flex items-center gap-1.5 shadow-apple active:scale-95 transition-all disabled:opacity-50"
+            title="Generar tips dinámicos con Gemini AI"
+          >
+            <Sparkles className={`w-3.5 h-3.5 ${isGeneratingAI ? 'animate-spin' : ''}`} />
+            <span>{isGeneratingAI ? 'Generando...' : 'Variar con IA'}</span>
+          </button>
+        )}
+      </div>
+
+      {/* AI Success or Error Banners */}
+      {aiSuccessMessage && (
+        <div className="mb-4 p-3 bg-gradient-to-r from-apple-green/15 to-apple-teal/15 border border-apple-green/30 rounded-apple-sm text-apple-green text-xs font-semibold animate-scale-in flex items-center gap-2">
+          <Sparkles className="w-4 h-4 flex-shrink-0" />
+          <span>{aiSuccessMessage}</span>
+        </div>
+      )}
+
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 dark:bg-red-950/50 border border-apple-red/20 rounded-apple-sm text-apple-red text-xs font-medium flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            <span>{error}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new CustomEvent('open-gemini-config'))}
+            className="text-xs underline font-bold"
+          >
+            Configurar Clave
+          </button>
+        </div>
+      )}
 
       {/* Tab Selector */}
       <div className="flex bg-apple-gray-6 dark:bg-white/10 rounded-apple-sm p-1 mb-5">
@@ -98,8 +189,13 @@ const Tips: React.FC = () => {
       {activeTab === 'nutricion' && (
         <div className="space-y-3">
           <WaterTracker />
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white mt-6 mb-3">Tips de Nutrición</h2>
-          {nutritionTips.map(tip => (
+          
+          <div className="flex items-center justify-between mt-6 mb-3">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white">Tips de Nutrición</h2>
+            <span className="text-[11px] text-apple-gray-1 dark:text-gray-400 font-medium">Actualizados para tu familia</span>
+          </div>
+
+          {nutritionTipsList.map(tip => (
             <div key={tip.id} className="apple-card p-4 flex gap-3">
               <span className="text-2xl flex-shrink-0">{tip.emoji}</span>
               <div>
@@ -197,7 +293,7 @@ const Tips: React.FC = () => {
           </div>
 
           <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Consejos de Bienestar</h3>
-          {wellnessTips.map(tip => (
+          {wellnessTipsList.map(tip => (
             <div key={tip.id} className="apple-card p-4 flex gap-3">
               <span className="text-2xl flex-shrink-0">{tip.emoji}</span>
               <div>
@@ -208,7 +304,7 @@ const Tips: React.FC = () => {
           ))}
 
           <h3 className="text-lg font-bold text-gray-900 dark:text-white mt-6 mb-2">Hidratación</h3>
-          {hydrationTips.map(tip => (
+          {hydrationTipsList.map(tip => (
             <div key={tip.id} className="apple-card p-4 flex gap-3">
               <span className="text-2xl flex-shrink-0">{tip.emoji}</span>
               <div>

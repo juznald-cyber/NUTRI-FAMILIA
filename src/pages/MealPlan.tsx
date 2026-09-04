@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { format, addDays, startOfWeek, isSameDay } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Wand2, RefreshCw, ChevronLeft, ChevronRight, Check, Download } from 'lucide-react';
+import { Wand2, RefreshCw, ChevronLeft, ChevronRight, Check, Download, Sparkles, AlertCircle } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, type MealPlanEntry, type Recipe } from '../db';
 import { generateAndSaveDailyPlan, generateAndSaveWeeklyPlan, regenerateSingleMeal, getDailyNutrition } from '../utils/mealPlanner';
+import { generateAIMealPlan, hasGeminiApiKey } from '../services/geminiService';
+import { addRecipe, addMealPlanEntry, updateMealPlanEntry } from '../hooks/useDatabase';
 import EditMealSheet from '../components/meal-plan/EditMealSheet';
 import ExportRangeModal from '../components/meal-plan/ExportRangeModal';
 
@@ -20,12 +22,17 @@ const MealPlan: React.FC = () => {
   );
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generationType, setGenerationType] = useState<'standard' | 'ai'>('ai');
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [aiSuccessMessage, setAiSuccessMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
   const [editSheet, setEditSheet] = useState<{
     isOpen: boolean;
     mealType: 'breakfast' | 'lunch' | 'dinner';
     entry?: MealPlanEntry;
   }>({ isOpen: false, mealType: 'breakfast' });
+
   const [nutrition, setNutrition] = useState({ calories: 0, protein: 0, carbs: 0, fat: 0 });
 
   const selectedDateStr = format(selectedDate, 'yyyy-MM-dd');
@@ -38,10 +45,70 @@ const MealPlan: React.FC = () => {
   );
 
   const recipes = useLiveQuery(() => db.recipes.toArray());
+  const pantryItems = useLiveQuery(() => db.pantryItems.toArray()) || [];
+  const familyMembers = useLiveQuery(() => db.familyMembers.toArray()) || [];
 
   useEffect(() => {
     getDailyNutrition(selectedDateStr).then(setNutrition);
   }, [selectedDateStr, dayMeals]);
+
+  // AI Meal Plan Generation with Gemini
+  const handleGenerateWithAI = async (scope: 'day' | 'week') => {
+    if (!hasGeminiApiKey()) {
+      window.dispatchEvent(new CustomEvent('open-gemini-config'));
+      return;
+    }
+
+    setIsGenerating(true);
+    setError(null);
+    setAiSuccessMessage(null);
+
+    const targetDates = scope === 'week' ? weekDatesStr : [selectedDateStr];
+
+    try {
+      const result = await generateAIMealPlan({
+        dates: targetDates,
+        pantryItems,
+        familyMembers,
+      });
+
+      // 1. Save newly generated recipes
+      const createdRecipeMap = new Map<string, number>();
+      for (const rec of result.recipes) {
+        const id = await addRecipe(rec);
+        createdRecipeMap.set(rec.name.toLowerCase().trim(), id);
+      }
+
+      // 2. Clear and set meal plan entries
+      for (const mp of result.mealPlans) {
+        const matchedId = createdRecipeMap.get(mp.recipeName.toLowerCase().trim());
+        const existing = await db.mealPlans.where({ date: mp.date, mealType: mp.mealType }).first();
+
+        if (existing && existing.id) {
+          await updateMealPlanEntry(existing.id, {
+            recipeId: matchedId,
+            customMealName: undefined,
+            customMealCalories: undefined,
+          });
+        } else {
+          await addMealPlanEntry({
+            date: mp.date,
+            mealType: mp.mealType,
+            recipeId: matchedId,
+            isCompleted: false,
+          });
+        }
+      }
+
+      setAiSuccessMessage(`✨ ¡Menú ${scope === 'week' ? 'semanal' : 'del día'} generado exitosamente con IA!`);
+      setTimeout(() => setAiSuccessMessage(null), 4000);
+    } catch (err: any) {
+      console.error('AI generation error:', err);
+      setError('Error al generar con IA. Verifica tu API Key de Gemini o usa la generación estándar.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const handleGenerateWeek = async () => {
     setIsGenerating(true);
@@ -83,13 +150,20 @@ const MealPlan: React.FC = () => {
     return dayMeals?.find(m => m.mealType === mealType);
   };
 
-  const calorieGoal = 2000;
+  const calorieGoal = familyMembers.length > 0
+    ? Math.round(familyMembers.reduce((sum, m) => sum + m.calorieGoal, 0) / familyMembers.length)
+    : 2000;
 
   return (
     <div className="px-5 pt-2 pb-4 animate-fade-in">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <h1 className="apple-large-title">Plan Semanal</h1>
+        <div>
+          <h1 className="apple-large-title">Plan Semanal</h1>
+          <p className="text-xs text-apple-gray-1 dark:text-gray-400">
+            Menú equilibrado para toda tu familia
+          </p>
+        </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsExportModalOpen(true)}
@@ -97,19 +171,45 @@ const MealPlan: React.FC = () => {
             title="Exportar Plan en PDF o Excel por fechas"
           >
             <Download className="w-4 h-4 text-apple-blue" />
-            <span>Exportar</span>
+            <span className="hidden sm:inline">Exportar</span>
           </button>
 
+          {/* Generate AI Week Button */}
           <button
-            onClick={handleGenerateWeek}
+            onClick={() => handleGenerateWithAI('week')}
             disabled={isGenerating}
-            className="apple-btn-primary text-sm py-2 px-4"
+            className="px-3.5 py-2 bg-gradient-to-r from-apple-orange to-apple-pink text-white rounded-apple-sm text-xs font-bold flex items-center gap-1.5 shadow-apple active:scale-95 transition-all disabled:opacity-50"
+            title="Generar menú semanal variado con Gemini IA"
           >
-            <Wand2 className="w-4 h-4 mr-1.5" />
-            {isGenerating ? 'Generando...' : 'Generar'}
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>{isGenerating ? 'Creando con IA...' : 'Semana IA'}</span>
           </button>
         </div>
       </div>
+
+      {/* AI Success or Error Banners */}
+      {aiSuccessMessage && (
+        <div className="mb-4 p-3 bg-gradient-to-r from-apple-green/15 to-apple-teal/15 border border-apple-green/30 rounded-apple-sm text-apple-green text-xs font-semibold animate-scale-in flex items-center gap-2">
+          <Sparkles className="w-4 h-4 flex-shrink-0" />
+          <span>{aiSuccessMessage}</span>
+        </div>
+      )}
+
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 dark:bg-red-950/50 border border-apple-red/20 rounded-apple-sm text-apple-red text-xs font-medium flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            <span>{error}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new CustomEvent('open-gemini-config'))}
+            className="text-xs underline font-bold"
+          >
+            Configurar Clave
+          </button>
+        </div>
+      )}
 
       {/* Week Selector */}
       <div className="apple-card p-4 mb-5">
@@ -173,19 +273,30 @@ const MealPlan: React.FC = () => {
         </div>
       </div>
 
-      {/* Generate Day Button */}
+      {/* Action Buttons for Day Generation */}
       {(!dayMeals || dayMeals.length === 0) && (
-        <button
-          onClick={handleGenerateDay}
-          disabled={isGenerating}
-          className="w-full apple-btn bg-gradient-to-r from-apple-green to-apple-teal text-white mb-5 shadow-apple"
-        >
-          <Wand2 className="w-4 h-4 mr-2" />
-          Generar Menú para {format(selectedDate, "EEEE d", { locale: es })}
-        </button>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-5">
+          <button
+            onClick={() => handleGenerateWithAI('day')}
+            disabled={isGenerating}
+            className="w-full py-3 px-4 bg-gradient-to-r from-apple-orange to-apple-pink text-white rounded-apple-sm text-xs sm:text-sm font-bold flex items-center justify-center gap-2 shadow-apple active:scale-95 transition-all disabled:opacity-50"
+          >
+            <Sparkles className="w-4 h-4" />
+            <span>{isGenerating ? 'Creando...' : `Generar Día con IA (Gemini)`}</span>
+          </button>
+
+          <button
+            onClick={handleGenerateDay}
+            disabled={isGenerating}
+            className="w-full py-3 px-4 bg-gray-100 dark:bg-white/10 hover:bg-gray-200 dark:hover:bg-white/20 text-gray-800 dark:text-gray-200 rounded-apple-sm text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition-all active:scale-95"
+          >
+            <Wand2 className="w-4 h-4 text-apple-green" />
+            <span>Generación Rápida</span>
+          </button>
+        </div>
       )}
 
-      {/* Meals */}
+      {/* Meals List */}
       <div className="space-y-3">
         {MEAL_TYPES.map(({ key, label, emoji }) => {
           const entry = getEntryForMeal(key);
@@ -210,12 +321,14 @@ const MealPlan: React.FC = () => {
                             ? 'bg-apple-green text-white'
                             : 'bg-gray-100 dark:bg-white/10 text-gray-400'
                         }`}
+                        title={entry.isCompleted ? 'Marcar como pendiente' : 'Marcar como completada'}
                       >
                         <Check className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleRegenerate(key)}
                         className="w-7 h-7 rounded-full flex items-center justify-center bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/20 transition-colors"
+                        title="Cambiar por otra receta"
                       >
                         <RefreshCw className="w-3.5 h-3.5" />
                       </button>
