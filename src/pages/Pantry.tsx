@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { Plus, Search, Trash2, Edit3, Camera, FileSpreadsheet } from 'lucide-react';
+import { Plus, Search, Trash2, Edit3, ReceiptText, FileSpreadsheet } from 'lucide-react';
 import { usePantryItems, deletePantryItem } from '../hooks/useDatabase';
 import { PANTRY_CATEGORIES, type PantryCategory, type PantryItem } from '../db';
 import PantryItemForm from '../components/pantry/PantryItemForm';
-import ScanFoodModal from '../components/pantry/ScanFoodModal';
+import ScanReceiptModal from '../components/pantry/ScanReceiptModal';
 import ImportExcelModal from '../components/pantry/ImportExcelModal';
 
 const ALL_CATEGORIES = Object.keys(PANTRY_CATEGORIES) as PantryCategory[];
@@ -76,10 +76,10 @@ const Pantry: React.FC = () => {
           <button
             onClick={() => setIsScanModalOpen(true)}
             className="px-3 py-2 bg-apple-green/10 hover:bg-apple-green/20 text-apple-green dark:bg-apple-green/20 dark:hover:bg-apple-green/30 rounded-apple-sm text-xs font-semibold flex items-center gap-1.5 transition-all active:scale-95 shadow-sm"
-            title="Escanear alimento con la cámara o foto"
+            title="Escanear boleta o factura de compras con la cámara"
           >
-            <Camera className="w-4 h-4" />
-            <span className="hidden sm:inline">Foto</span>
+            <ReceiptText className="w-4 h-4" />
+            <span className="hidden sm:inline">Boleta/Factura</span>
           </button>
 
           <button
@@ -184,15 +184,15 @@ const Pantry: React.FC = () => {
             <span className="text-5xl mb-4">🛒</span>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Despensa vacía</h3>
             <p className="text-sm text-apple-gray-1 dark:text-gray-400 mb-4">
-              Agrega tus productos tomando una foto, con Excel o manualmente
+              Agrega tus productos escaneando una boleta/factura, con Excel o manualmente
             </p>
             <div className="flex flex-wrap items-center justify-center gap-2">
               <button
                 onClick={() => setIsScanModalOpen(true)}
                 className="apple-btn bg-apple-green text-white shadow-apple"
               >
-                <Camera className="w-4 h-4 mr-1.5" />
-                Tomar Foto
+                <ReceiptText className="w-4 h-4 mr-1.5" />
+                Escanear Boleta
               </button>
               <button
                 onClick={() => setIsImportExcelModalOpen(true)}
@@ -213,8 +213,8 @@ const Pantry: React.FC = () => {
         editItem={editingItem}
       />
 
-      {/* Photo Scanner Modal */}
-      <ScanFoodModal
+      {/* Receipt Scanner Modal */}
+      <ScanReceiptModal
         isOpen={isScanModalOpen}
         onClose={() => setIsScanModalOpen(false)}
       />

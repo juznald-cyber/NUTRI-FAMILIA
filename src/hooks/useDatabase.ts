@@ -35,6 +35,18 @@ export async function addPantryItem(item: Omit<PantryItem, 'id'>) {
   return id;
 }
 
+export async function bulkAddPantryItems(items: Omit<PantryItem, 'id'>[]) {
+  const addedIds: number[] = [];
+  for (const item of items) {
+    const syncId = item.syncId || generateSyncId('pnt');
+    const fullItem = { ...item, syncId };
+    const id = await db.pantryItems.add(fullItem);
+    await pushPantryItemToCloud({ ...fullItem, id });
+    addedIds.push(id);
+  }
+  return addedIds;
+}
+
 export async function updatePantryItem(id: number, changes: Partial<PantryItem>) {
   await db.pantryItems.update(id, changes);
   const updated = await db.pantryItems.get(id);

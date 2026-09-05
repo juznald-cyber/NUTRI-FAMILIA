@@ -53,10 +53,10 @@ function getAIClient(): GoogleGenAI {
   return new GoogleGenAI({ apiKey });
 }
 
-const VALID_MODELS = ['gemini-2.5-flash', 'gemini-1.5-flash', 'gemini-2.5-flash-lite'];
+const VALID_MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-3.5-flash'];
 
 async function generateWithFallback(options: {
-  contents: string;
+  contents: string | any[];
   responseMimeType?: string;
   temperature?: number;
 }): Promise<string> {
@@ -66,6 +66,9 @@ async function generateWithFallback(options: {
   }
 
   let lastErr: any = null;
+  const parts = typeof options.contents === 'string'
+    ? [{ text: options.contents }]
+    : options.contents;
 
   for (const model of VALID_MODELS) {
     try {
@@ -73,11 +76,11 @@ async function generateWithFallback(options: {
       const payload: any = {
         contents: [
           {
-            parts: [{ text: options.contents }]
+            parts: parts
           }
         ],
         generationConfig: {
-          temperature: options.temperature ?? 0.7,
+          temperature: options.temperature ?? 0.2,
         }
       };
       if (options.responseMimeType) {
@@ -96,11 +99,12 @@ async function generateWithFallback(options: {
         const errorMsg = data?.error?.message || `HTTP ${res.status}`;
         console.warn(`Gemini model ${model} error:`, errorMsg);
         
-        if (res.status === 400 && (errorMsg.includes('API_KEY_INVALID') || errorMsg.includes('API key not valid') || errorMsg.includes('API_KEY_SERVICE_BLOCKED'))) {
-          throw new Error('Tu clave de API de Gemini no es válida. Por favor crea una nueva clave en Google AI Studio y pégala en Configuración.');
+        // Critical errors that won't be fixed by switching models (API key invalid, blocked, permission denied, etc.)
+        if (res.status === 400 || res.status === 401 || res.status === 403) {
+          throw new Error(`Problema con la API Key (HTTP ${res.status}): ${errorMsg}. Verifica tu clave de Gemini en Configuración.`);
         }
 
-        lastErr = new Error(errorMsg);
+        lastErr = new Error(`Error de Gemini (${res.status}): ${errorMsg}`);
         continue;
       }
 
@@ -109,8 +113,8 @@ async function generateWithFallback(options: {
         return text;
       }
     } catch (err: any) {
-      if (err.message?.includes('clave de API de Gemini no es válida')) {
-        throw err;
+      if (err.message?.includes('Problema con la API Key') || err.message?.includes('clave de API de Gemini no es válida')) {
+        throw err; // Stop falling back for auth/key errors
       }
       lastErr = err;
       console.warn(`Model ${model} failed, trying next fallback:`, err);
@@ -118,6 +122,102 @@ async function generateWithFallback(options: {
   }
 
   throw lastErr || new Error('No se pudo conectar con el servicio de IA de Gemini.');
+}
+
+export interface ScannedReceiptProduct {
+  name: string;
+  category: import('../db').PantryCategory;
+  quantity: number;
+  unit: string;
+  caloriesPer100g?: number;
+  proteinPer100g?: number;
+  carbsPer100g?: number;
+  fatPer100g?: number;
+}
+
+/**
+ * Scans a supermarket/grocery receipt, invoice or ticket image and extracts all food items.
+ */
+export async function scanReceiptAndExtractProducts(
+  base64DataUrl: string
+): Promise<ScannedReceiptProduct[]> {
+  // Extract mime type and raw base64 data
+  let mimeType = 'image/jpeg';
+  let base64Data = base64DataUrl;
+
+  const match = base64DataUrl.match(/^data:([^;]+);base64,(.+)$/);
+  if (match) {
+    mimeType = match[1];
+    base64Data = match[2];
+  }
+
+  const prompt = `Eres un asistente inteligente de visión artificial y nutrición para NutriFamilia.
+Tu tarea es examinar con alta precisión la imagen de esta factura, boleta, ticket de compra o recibo de supermercado.
+
+INSTRUCCIONES CLAVE:
+1. Extrae TODOS y cada uno de los alimentos, ingredientes y productos comestibles que aparezcan en la factura.
+2. Limpia y normaliza el nombre de cada alimento para que sea legible y humano (ej. si el ticket dice "POLLO PECH DESH 1KG", nómbralo "Pechuga de Pollo Deshuesada"; si dice "LECH ENTERA COLUN 1L", nómbralo "Leche Entera").
+3. Clasifica cada producto en una de estas categorías EXACTAS:
+   - "vegetales"
+   - "frutas"
+   - "proteinas"
+   - "granos"
+   - "lacteos"
+   - "aceites"
+   - "condimentos"
+   - "enlatados"
+   - "congelados"
+   - "bebidas"
+   - "otros"
+4. Determina la cantidad numérica y la unidad ('unidades', 'kg', 'g', 'litros', 'paquetes', 'latas', 'bolsas'). Si no se indica cantidad explícita, asume 1.
+5. Asigna valores estimados aproximados de macronutrientes por 100g (caloriesPer100g, proteinPer100g, carbsPer100g, fatPer100g).
+6. IMPORTANTE: Ignora por completo artículos NO comestibles (como bolsas plásticas, detergente, jabón, papel higiénico, servilletas, pilas, etc.), así como encabezados de tienda, RUT, impuestos, totales, cambio, etc.
+
+Responde ÚNICAMENTE con un JSON con la siguiente estructura:
+{
+  "products": [
+    {
+      "name": "Nombre limpio del producto",
+      "category": "vegetales" | "frutas" | "proteinas" | "granos" | "lacteos" | "aceites" | "condimentos" | "enlatados" | "congelados" | "bebidas" | "otros",
+      "quantity": 1,
+      "unit": "unidades" | "kg" | "g" | "litros" | "paquetes" | "latas" | "bolsas",
+      "caloriesPer100g": 120,
+      "proteinPer100g": 20,
+      "carbsPer100g": 0,
+      "fatPer100g": 3
+    }
+  ]
+}`;
+
+  const parts = [
+    { text: prompt },
+    {
+      inlineData: {
+        mimeType: mimeType,
+        data: base64Data
+      }
+    }
+  ];
+
+  const responseText = await generateWithFallback({
+    contents: parts,
+    responseMimeType: 'application/json',
+    temperature: 0.1
+  });
+
+  try {
+    const parsed = JSON.parse(responseText || '{}');
+    if (Array.isArray(parsed.products)) {
+      return parsed.products;
+    }
+    if (Array.isArray(parsed)) {
+      return parsed;
+    }
+    return [];
+  } catch (err) {
+    console.error('Failed to parse receipt JSON from Gemini:', err, responseText);
+    throw new Error('No se pudo estructurar la lista de productos de la boleta. Intenta con una foto más nítida o iluminada.');
+  }
 }
 
 export interface AIGeneratedPlanResponse {
